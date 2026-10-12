@@ -1,120 +1,71 @@
-# Technical Specification
+# DevFlow AI — MVP Specification
 
-**Product:** DevFlow AI  
-**Status:** Proposed technical requirements; implementation choices remain subject to confirmation.  
-**Relationship:** `PRD.md` defines product requirements and acceptance criteria. This document translates them into technical behavior. `ARCHITECTURE.md` describes the proposed component boundaries.
+## Status
+This specification records the agreed MVP direction. Detailed implementation choices must be validated against the repository before changes are made.
 
-## 1. Scope
+## Interfaces
+- Web: Next.js App Router, React, TypeScript, Tailwind CSS, shadcn/ui.
+- CLI: Python CLI over the shared HTTP API.
+- Backend: FastAPI + Pydantic.
+- Orchestration: LangGraph in a background worker.
+- Persistence: PostgreSQL.
+- Redis: optional and purpose-driven, not the durable source of truth.
 
-The system should support a traceable software-task lifecycle: task intake, context loading, planning, controlled execution, approval pauses, verification, and evidence-based reporting.
+## Initial API contract
 
-This specification is not a claim that these capabilities are implemented.
+### `POST /api/v1/tasks`
+Creates a task. Validate input, authorize the caller, persist task and dispatch intent, then return promptly.
 
-## 2. Core entities
+Success: `202 Accepted`
+```json
+{
+  "task_id": "opaque-stable-id",
+  "status": "queued",
+  "created_at": "ISO-8601 timestamp",
+  "status_url": "/api/v1/tasks/opaque-stable-id",
+  "events_url": "/api/v1/tasks/opaque-stable-id/events"
+}
+```
 
-Proposed domain records:
-- **Task:** identifier, goal, context references, acceptance criteria, constraints, current status, timestamps.
-- **Workflow run:** task reference, workflow version, current stage, run status, timing, failure information.
-- **Tool invocation:** tool identifier, validated arguments or sanitized summary, authorization decision, approval reference if required, execution status, result metadata.
-- **Approval:** requested action and scope, requester, decision, approver, timestamp, expiration or invalidation information.
-- **Verification result:** check name, command or check identifier, status classification, exit status when applicable, timestamps, and sanitized output reference.
-- **Audit event:** event type, actor/source, task/run reference, timestamp, and non-secret metadata.
+The example is illustrative. The actual ID format and schema are implementation decisions. Return a validation error for malformed input; do not return success if durable acceptance/dispatch intent failed.
 
-Field-level schemas, storage engine, retention, and migration strategy are open decisions.
+### `GET /api/v1/tasks/{task_id}`
+Returns the authorized caller's current task snapshot and allowed result metadata.
 
-## 3. Workflow contract
+### `GET /api/v1/tasks/{task_id}/events`
+SSE stream of task lifecycle and progress events. Define event IDs, heartbeat behavior, reconnect semantics, authorization, and replay/snapshot strategy. Important state transitions must be persisted independently of a transient connection.
 
-1. Validate the task request and required acceptance criteria.
-2. Load applicable project instructions and bounded context.
-3. Create a workflow run with an explicit initial state.
-4. Produce a plan and identify ambiguities or approval requirements.
-5. Invoke only registered agent adapters and allowlisted tools.
-6. Validate every tool call independently of model output.
-7. Pause when an approval policy applies; resume only after a valid decision.
-8. Run configured verification checks and record actual outcomes.
-9. Derive completion status from workflow state and required evidence, not from a free-form model statement.
-10. Produce a final report with changes, verification, limitations, and unresolved risks.
+### `POST /api/v1/tasks/{task_id}/cancel`
+Requests cancellation. The API must distinguish accepted cancellation request from worker-confirmed cancellation.
 
-## 4. State and result semantics
+### `POST /api/v1/tasks/{task_id}/approval`
+Records an authorized approval/rejection decision for a task paused in `needs_approval`. Validate that the task is actually awaiting that decision.
 
-Use explicit, validated state transitions. The exact state names should be agreed during implementation; likely task states include `queued`, `running`, `needs_approval`, `completed`, `failed`, `cancelled`, and `blocked`.
+## Task lifecycle
+States: `queued`, `running`, `needs_approval`, `completed`, `failed`, `cancelled`, `blocked`.
 
-Verification results must distinguish:
-- `PASS`
-- `FAIL`
-- `SKIPPED`
-- `NOT RUN`
-- `BLOCKED`
-- `INCONCLUSIVE`
+Allowed transitions:
+- `queued` → `running`, `cancelled`, `blocked`
+- `running` → `needs_approval`, `completed`, `failed`, `cancelled`, `blocked`
+- `needs_approval` → `running`, `cancelled`, `blocked`
+- `blocked` → `queued`, `cancelled`
+- `completed`, `failed`, `cancelled` are terminal.
 
-A required check that is failing, blocked, inconclusive, skipped, or not run must not be represented as passed. If the product permits completion with unrun checks, the report must explicitly disclose that limitation and the completion policy must be approved.
+Record actor, timestamp, from/to states, reason, and attempt where applicable. Retries must be explicit and idempotent; do not silently reopen terminal tasks.
 
-## 5. Tool gateway contract
+## Error semantics
+Use consistent structured errors with a stable machine-readable code, human-readable message, request/correlation ID, and field details where appropriate. Do not leak stack traces, secrets, internal paths, or provider credentials.
 
-Each registered tool should declare:
-- Stable name and version.
-- Purpose and permitted capabilities.
-- Input schema and validation rules.
-- Required permissions and approval policy.
-- Timeout, retry, and output-size limits.
-- Execution environment and filesystem/network access.
-- Audit metadata and error mapping.
+## Worker semantics
+- Job execution is separate from HTTP request handling.
+- Use bounded concurrency, deadlines, cancellation checks, and retries.
+- Plan for duplicate job delivery and idempotent processing.
+- Persist enough state to recover from worker restarts.
+- Define queue/database consistency strategy before production.
+- LangGraph checkpoints support graph recovery but do not by themselves guarantee reliable queue delivery.
 
-Unknown tools, invalid arguments, denied permissions, unavailable policy decisions, and missing approvals must fail closed. Tool outputs are untrusted data.
+## Performance measurement
+Record server-side API duration separately from queue wait, LLM latency, tool latency, graph duration, and total task duration. Use p50/p95/p99 and representative concurrency. UI budgets are specified in `PRD.md` and `ARCHITECTURE.md`.
 
-## 6. Context and retrieval contract
-
-- Load project-level instructions before editing.
-- Track the source of retrieved context where practical.
-- Apply size limits and relevance filters.
-- Keep retrieved content separate from trusted policy.
-- Do not allow retrieved text to grant permissions, alter tool policy, or override trusted instructions.
-- Avoid passing secrets or irrelevant private data to external model providers.
-
-## 7. Observability and reporting
-
-Record state transitions, policy decisions, approval decisions, tool outcomes, retries, timeouts, and verification results. Logs and traces must be sanitized.
-
-The final report should include:
-- Task outcome and concise summary.
-- Files or artifacts changed when known.
-- Checks run and their exact status.
-- Approvals requested and decisions.
-- Checks not run or blocked.
-- Known risks, assumptions, and follow-up work.
-
-## 8. Reliability requirements
-
-- Bound retries and agent iteration counts.
-- Apply timeouts to external calls and tool execution.
-- Support cancellation where the execution mechanism permits it.
-- Make retryable operations idempotent where feasible.
-- Preserve failure context and do not silently convert exceptions into success.
-- Define behavior for process restart and interrupted approvals before production use.
-
-## 9. Testing requirements
-
-Implement tests for:
-- Task validation and state transitions.
-- Workflow success and failure paths.
-- Tool allowlist and argument validation.
-- Approval required, rejected, expired, and mismatched cases.
-- Context prompt-injection attempts.
-- Timeout, retry, cancellation, and policy-service failure.
-- Verification-result aggregation and final-report truthfulness.
-- Authorization and secret redaction.
-
-See `docs/TESTING.md` and `docs/SECURITY.md`.
-
-## 10. Open technical decisions
-
-- API and UI/CLI framework.
-- Authentication and authorization implementation.
-- Persistence and event/audit storage.
-- Coding-agent adapters and model providers.
-- MCP servers and tool allowlist.
-- Sandbox/execution isolation technology.
-- Retrieval/indexing/vector-store implementation.
-- Deployment, secret management, telemetry, and evaluation stack.
-
-Resolve decisions through explicit owner approval and update this document, `ARCHITECTURE.md`, and relevant tests.
+## Security requirements
+All task and event access is authorized per task. Tool arguments are schema-validated. Tools are deny-by-default and constrained by allowlists, least privilege, timeouts, output limits, audit events, and approval gates for consequential operations.

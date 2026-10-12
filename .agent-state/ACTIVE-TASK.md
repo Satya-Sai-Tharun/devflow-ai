@@ -1,53 +1,51 @@
 # Active Task
 
-**Task ID:** DOC-001  
-**Title:** Reconcile and approve the project source-of-truth documentation  
-**Status:** Draft prepared for review; not yet reconciled against the user's local tree.
+**Task ID:** ARCH-001  
+**Title:** Align architecture and project documentation with the selected performance-first MVP  
+**Status:** Documentation update prepared; local repository application and validation are not verified.
 
 ## Objective
-
-Create a consistent documentation baseline for DevFlow AI, using the four document roles shown in the supplied reference (PRD, design system, architecture, agent instructions) and supporting security, style, testing, and planning documents.
+Align project source-of-truth documents around the owner-selected MVP: Next.js + shadcn/ui dashboard, FastAPI + LangGraph, Python CLI, PostgreSQL, optional purpose-driven Redis, durable background execution, SSE progress, and measurable performance budgets.
 
 ## Scope
-
 - `PRD.md`
-- `Design-system.md`
+- `SPEC.md`
 - `ARCHITECTURE.md`
+- `Design-system.md`
 - `AGENTS.md`
 - `CODE_STYLE.md`
 - `docs/SECURITY.md`
 - `docs/TESTING.md`
 - `PLAN.md`
+- `README.md`
 - `.agent-state/CURRENT.md`
 - `.agent-state/ACTIVE-TASK.md`
-- Review/update `README.md` to link the approved docs.
 
 ## Procedure
-
-1. Inspect Git state and existing documents.
-2. Merge, do not blindly overwrite, existing repository-specific guidance.
-3. Keep proposals and open decisions clearly labeled.
-4. Review links, terminology, file casing, and cross-document consistency.
-5. Run Markdown/link checks if the repository has suitable tooling; report only checks actually run.
-6. Ask the owner to approve product scope and provisional visual tokens.
+1. Inspect Git status, recent commits, and current files.
+2. Compare proposed updates with repository-specific content and preserve useful existing rules.
+3. Do not overwrite `CLAUDE.md`, `.github/copilot-instructions.md`, or agent/tool configuration without reviewing their existing content and merging only necessary changes.
+4. Preserve all existing skills, including UI/UX and design-system skills.
+5. Check internal Markdown links, terminology, file casing, and lifecycle/API consistency.
+6. Run available documentation checks and report only those actually executed.
+7. Do not commit or push without explicit authorization.
 
 ## Acceptance criteria
-
-- Product scope and non-goals are explicit.
-- Architecture is labeled proposed where decisions are unconfirmed.
-- Agents know what to read, how to coordinate, how to test, and when to ask.
-- Security, testing, and style rules do not contradict agent instructions.
-- The design system defines tokens, components, states, responsive behavior, and accessibility rules.
-- Open decisions are visible rather than silently guessed.
-- Existing work is preserved and no commit/push occurs without explicit authorization.
+- MVP stack and API/CLI/dashboard parity are explicit.
+- API task submission is decoupled from long-running LangGraph execution.
+- Task lifecycle, SSE recovery, approval, cancellation, retry, and worker recovery are specified.
+- Performance targets are measurable and clearly marked as unverified targets.
+- UI design guidance supports shadcn/ui, accessibility, and low-cost interactions.
+- Security, testing, and agent rules agree.
+- Existing repository-specific guidance and user changes are preserved.
+- Implementation and test status are not fabricated.
 
 ## Out of scope
-
-- Implementing application features.
-- Choosing unapproved infrastructure or provider integrations.
-- Claiming security or production readiness without evidence.
-- Automatically changing the remote GitHub repository.
+- Creating the application scaffold.
+- Installing dependencies.
+- Moving current files into a new monorepo layout.
+- Implementing real agent execution, shell tools, or MCP integrations.
+- Committing, pushing, or changing remote GitHub state.
 
 ## Handoff
-
-Before implementation, compare this task with the actual local tree and update the status based on verified work.
+After applying these changes locally, inspect the diff and run Markdown/link checks if available. Then begin Milestone 1 only after verifying the repository tree and package conventions.

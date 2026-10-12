@@ -1,66 +1,48 @@
 # Code Style and Engineering Conventions
 
-**Status:** Baseline rules; language-specific tooling must be confirmed from the repository before commands or configurations are added.
+## General
+- Favor readable, typed, cohesive code over clever abstractions.
+- Keep changes focused; avoid unrelated formatting churn.
+- Name modules and functions by responsibility.
+- Validate at system boundaries and keep domain invariants in domain code.
+- Document non-obvious tradeoffs, not self-evident syntax.
+- Do not commit secrets, local environment files, caches, build outputs, or generated data unless explicitly required.
 
-## 1. General principles
+## Python
+- Use type annotations for public functions, domain models, and API contracts.
+- Use Pydantic at request/response boundaries and explicit domain validation for lifecycle transitions.
+- Keep I/O boundaries visible; use async functions for async I/O and avoid blocking the event loop.
+- Use structured exceptions and stable error codes at API boundaries.
+- Configure format/lint/type-check tools after inspecting current project conventions; do not introduce duplicate tooling without reason.
+- Tests should be deterministic and avoid real provider/network calls by default.
 
-- Prefer readable, explicit code over clever or overly compressed implementations.
-- Keep functions, modules, and components focused on one responsibility.
-- Use descriptive names and consistent terminology from `PRD.md` and `ARCHITECTURE.md`.
-- Avoid unrelated refactors, speculative abstractions, and duplicate sources of truth.
-- Document non-obvious decisions and public interfaces, not every line.
+## TypeScript and React
+- Use strict TypeScript and explicit types for API contracts.
+- Avoid `any`; prefer narrowing and schema validation for untrusted input.
+- Keep components small and focused. Separate server state, UI state, and derived state.
+- Use Server Components by default when interaction is not required.
+- Use Client Components only where needed; avoid unnecessary effects and duplicate state.
+- Reuse shadcn/ui and existing design tokens.
+- Make loading, empty, error, reconnecting, and permission states explicit.
+- Respect keyboard access, visible focus, semantic HTML, and reduced-motion preferences.
 
-## 2. Formatting and linting
+## API and domain
+- Version public API routes (`/api/v1/...`).
+- Keep request and response schemas explicit and stable.
+- Use consistent structured error responses and correlation IDs.
+- Enforce task ownership and authorization on task reads and event streams.
+- Make task transitions transactional and auditable.
+- Design job handlers to tolerate duplicate delivery and retries.
 
-- First inspect existing formatter, linter, type-checker, and configuration files.
-- Use the repository's configured tools and versions; do not introduce a competing formatter without approval.
-- Keep diffs focused and avoid formatting untouched files.
-- Do not claim linting or formatting checks passed unless the command actually completed successfully.
+## Performance
+- Benchmark before and after optimization.
+- Track API server time separately from queue, LLM, and tool time.
+- Avoid N+1 queries, unbounded concurrency, large synchronous payloads, and noisy frontend rerenders.
+- Add caching only with an explicit invalidation strategy.
+- Do not optimize based solely on intuition or report unmeasured claims.
 
-## 3. Naming
-
-- Follow the language's established conventions and existing project patterns.
-- Use names that communicate intent; avoid unexplained abbreviations.
-- Keep product terms consistent: task, workflow, approval, tool, verification, audit event.
-- Use consistent casing for public types, modules, files, and environment-variable names.
-
-## 4. Modules and dependencies
-
-- Keep provider-specific integrations behind narrow adapters.
-- Validate data at module and service boundaries.
-- Avoid circular dependencies and unnecessary global mutable state.
-- Add dependencies only when they provide clear value; explain material trade-offs.
-- Pin or constrain versions using the repository's existing dependency-management strategy.
-
-## 5. Error handling and logging
-
-- Fail explicitly and preserve useful diagnostic context.
-- Do not swallow exceptions or convert failures into success.
-- Do not log secrets, access tokens, private keys, or unnecessary personal data.
-- Use structured logs and stable error categories where supported.
-- Apply timeouts and bounded retries to external calls.
-
-## 6. Configuration and secrets
-
-- Use environment-based or approved secret-manager configuration.
-- Keep real credentials out of Git and examples.
-- Validate required configuration at startup and provide actionable, non-sensitive errors.
-- Document safe placeholders in `.env.example` if the project uses one.
-
-## 7. UI conventions
-
-- Follow `Design-system.md` for approved tokens, states, spacing, and accessibility.
-- Reuse existing shared components and styling mechanisms.
-- Provide loading, empty, error, disabled, and focus states where applicable.
-- Do not use color alone to convey state.
-
-## 8. Tests
-
-- Follow `docs/TESTING.md`.
-- Prefer deterministic tests with explicit fixtures.
-- Test success, invalid input, failure, permission-denied, timeout, and boundary cases as relevant.
-- Avoid tests that depend on live external services unless explicitly classified as integration tests.
-
-## 9. Open decisions
-
-Confirm language-specific formatting, linting, type checking, import sorting, test commands, and CI enforcement after inspecting the actual repository. Do not add hypothetical commands to documentation as if they are verified.
+## Git and coordination
+- Inspect `git diff` and `git status` before and after work.
+- Avoid force pushes and history rewriting.
+- Do not commit/push unless requested.
+- For parallel agents, define ownership and avoid overlapping edits.

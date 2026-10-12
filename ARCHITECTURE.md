@@ -1,138 +1,221 @@
-# Architecture
+# DevFlow AI Architecture
 
-**Product:** DevFlow AI  
-**Status:** Proposed logical architecture. This document does not assert that the described components are already implemented.  
-**Purpose:** Explain system boundaries, data flow, and where changes belong.
+**Status:** Owner-approved MVP direction; implementation details remain subject to repository inspection and testing.
 
-## 1. Architecture overview
+## 1. Product and architecture goals
 
-DevFlow AI is intended to orchestrate agent-assisted software tasks through explicit workflow states, controlled tools, project context, verification, and human approval.
+DevFlow AI coordinates AI coding agents through controlled workflows, shared task context, tool integrations, human approval, and automated verification.
 
-Conceptual flow:
+The MVP includes:
+- A web dashboard built with Next.js App Router, React, TypeScript, Tailwind CSS, and shadcn/ui.
+- A Python API built with FastAPI and Pydantic.
+- LangGraph for agent workflow orchestration.
+- A Python CLI that uses the same HTTP API as the dashboard.
+- PostgreSQL for durable task, workflow, and audit data.
+- Redis only where justified for queue coordination, caching, rate limiting, or ephemeral coordination.
+- A background worker for long-running workflow execution.
+- Server-Sent Events (SSE) for one-way task-progress updates.
 
-`User / CLI / UI → Task API → LangGraph workflow → Context + Agent adapters → Tool policy gateway → Isolated execution → Verification → Audit/result store → Final report`
+Primary quality attributes: low request latency, responsive UI, recoverability, security, observable behavior, and testability.
 
-The final component boundaries and deployment topology remain open until the repository implementation and MVP decisions are confirmed.
+## 2. Architectural principles
 
-## 2. Proposed component responsibilities
+1. **Fast request path:** HTTP handlers validate, persist/enqueue, and respond. They do not wait for an entire agent workflow.
+2. **Asynchronous execution:** Long-running LLM calls, tool execution, retries, and verification run in a worker.
+3. **One task domain:** The web UI and CLI use the same API contracts and lifecycle rules.
+4. **Durable state:** Persist task transitions and workflow checkpoints needed for recovery. Do not treat in-memory state or Redis alone as the source of truth for durable task history.
+5. **Explicit trust boundaries:** Agent output is untrusted input. Tools require allowlists, validated arguments, scoped permissions, and audit records.
+6. **Human control:** Consequential actions pause for approval; cancellation and timeout are explicit states/operations.
+7. **Measure before optimizing:** Establish latency, rendering, and load-test baselines before claiming performance.
+8. **Incremental delivery:** Implement and test task lifecycle before adding broad agent integrations, RAG, or multi-agent collaboration.
 
-| Component | Responsibility |
-|---|---|
-| Entry point / UI | Collect task goal, constraints, acceptance criteria, and approval decisions |
-| Task/API layer | Validate requests, enforce identity/authorization, expose task status |
-| Workflow orchestrator | Manage state transitions, retries, branching, approvals, and verification stages |
-| Agent adapters | Normalize interactions with supported coding agents and model providers |
-| Context service | Load project instructions and retrieve relevant repository/knowledge context |
-| Tool policy gateway | Validate tool identity, arguments, permissions, and approval requirements |
-| Execution boundary | Run permitted commands or code operations in a constrained environment |
-| Approval service | Pause workflow until an authorized human approves or rejects a gated action |
-| Verification service | Run configured checks and record actual outcomes |
-| Persistence/audit | Store task state, events, approvals, tool results, and verification evidence |
-| Evaluation/observability | Measure workflow outcomes, latency, failures, and evaluation-set performance |
+## 3. Proposed repository layout
 
-These are logical boundaries, not a mandate to create a separate service for each row. Prefer the simplest deployable structure that preserves security boundaries.
+Reconcile this proposal with the actual tree before moving existing files. Do not delete or bulk-rewrite current agent configuration, skills, or project-specific instructions.
 
-## 3. Repository structure
+```text
+devflow-ai/
+├── apps/
+│   ├── web/                 # Next.js dashboard and shadcn/ui
+│   └── cli/                 # Python CLI; HTTP client for the API
+├── services/
+│   ├── api/                 # FastAPI application and API schemas
+│   └── worker/              # Background job runner and LangGraph entrypoint
+├── libs/
+│   └── core/                # Task domain, lifecycle, policy interfaces
+├── packages/
+│   └── shared-types/        # OpenAPI-generated or language-neutral contracts
+├── tests/
+│   ├── unit/
+│   ├── integration/
+│   └── performance/
+├── docs/
+├── .agent-state/
+└── project source-of-truth documents
+```
 
-Use the existing repository layout as the source of truth. The following is a target responsibility map, not a claim that every directory currently exists:
+This is a target layout, not a claim that these directories already exist. Avoid creating empty abstractions without a concrete use. Python code should not be imported directly by the TypeScript application; generate TypeScript contracts from OpenAPI or maintain a language-neutral schema.
 
-- `app/` or the established application source directory — runtime application code.
-- `tests/` — automated tests, fixtures, and test helpers.
-- `docs/` — security, testing, design, and operational documentation.
-- `.agent-state/` — concise coordination state for multi-agent work; do not store secrets.
-- `.agents/skills/` — reusable agent skills and their references.
-- `.github/` — repository automation and Copilot instructions.
-- `README.md` — project entry point, setup, verified commands, and links to core docs.
-- `PRD.md` — product scope and acceptance criteria.
-- `ARCHITECTURE.md` — system boundaries and data flow.
-- `PLAN.md` — milestones and sequencing.
-- `AGENTS.md` — instructions for coding agents.
+## 4. Logical components
 
-Before creating or renaming directories, inspect the current tree and preserve established conventions.
+### Web dashboard
+- Next.js App Router and TypeScript.
+- shadcn/ui components styled through the existing design tokens.
+- Server Components for static/initial content where appropriate; Client Components for interactive state.
+- TanStack Query or an equivalent query/cache layer if it materially simplifies server-state synchronization.
+- SSE client for task progress; reconnect and fetch the current task snapshot after reconnect.
+- Avoid polling at high frequency when a stream is available.
 
-## 4. Data flow
+### CLI
+- Python CLI (Typer is the default candidate) using an HTTP client such as HTTPX.
+- Uses the same authentication, API contracts, task lifecycle, and error semantics as the dashboard.
+- Does not independently execute business workflows or bypass server policy.
 
-1. A user submits a task with goal, acceptance criteria, and constraints.
-2. The API validates the request and creates a task record.
-3. The workflow loads repository instructions and relevant context.
-4. The planning stage proposes a bounded plan and identifies uncertainties.
-5. The workflow invokes only configured agent adapters and policy-approved tools.
-6. A gated action pauses for explicit human approval before execution.
-7. Permitted operations run inside the selected execution boundary.
-8. Verification runs configured checks and records command, exit status, and result classification.
-9. The workflow updates task state and writes an audit trail.
-10. The final report separates completed work, verified claims, failures, skipped checks, and unresolved risks.
+### FastAPI service
+- Pydantic request/response schemas and explicit versioned API contracts.
+- Async endpoints for asynchronous I/O; do not call blocking operations directly from async handlers.
+- Task submission creates a durable task and reliably dispatches it to the worker.
+- Returns `202 Accepted` with a task identifier after successful acceptance.
+- Exposes task reads, cancellation where supported, approval decisions, and an SSE event stream.
+- Enforces authentication, authorization, validation, rate limits, and request-size limits.
 
-The source of truth for task state should be the task/workflow record, not a UI-only local state. The exact persistence technology is an open decision.
+### Task domain and persistence
+- PostgreSQL is the durable source of truth for tasks, status transitions, user/tenant ownership where applicable, approvals, and audit events.
+- Use transactions for task creation and lifecycle changes.
+- Design queue dispatch to avoid losing a task between database commit and enqueue (for example, a transactional outbox or a proven durable job mechanism).
+- Add indexes based on measured query patterns.
+- Use connection pooling and bounded query timeouts.
 
-## 5. State and trust boundaries
+### Worker and LangGraph
+- A separately managed worker consumes accepted tasks and invokes LangGraph.
+- LangGraph state is typed, bounded, and explicit; checkpoints enable supported pause/resume and recovery behavior.
+- Keep planning, execution, verification, and reporting as explicit stages.
+- Add bounded retries, deadlines, cancellation checks, idempotency, and failure handling.
+- Limit concurrent jobs and tool calls; do not create unbounded parallelism.
+- Worker delivery may be at-least-once. Handlers must be idempotent; do not promise exactly-once execution without a proven mechanism.
 
-- Treat user prompts, repository files, issue descriptions, retrieved documents, logs, and agent outputs as potentially untrusted.
-- Retrieved content may inform task execution but must not override system policy, authorization, or project safety rules.
-- Tool policy must be enforced outside the language model's judgment.
-- Validate tool arguments at the gateway and again at sensitive execution boundaries where appropriate.
-- Use least-privilege credentials and narrowly scoped permissions.
-- Fail closed if authorization or policy evaluation is unavailable.
-- Require approval for consequential actions as defined in `docs/SECURITY.md`.
-- Do not expose secrets in prompts, logs, traces, or final reports.
+### Redis
+Use only for a demonstrated need: ephemeral coordination, cache, rate limiting, or queue technology. Do not store the only copy of durable task/audit state in Redis. Choose one durable job-dispatch strategy and document its recovery guarantees before implementation.
 
-## 6. Integrations
+### Tool gateway and MCP
+- Central policy boundary for local tools and MCP servers.
+- Explicit tool allowlist, schemas, authorization, timeouts, output-size limits, and audit events.
+- Treat tool output, retrieved documents, and model output as untrusted.
+- Require approval for consequential operations and isolate shell/filesystem execution in a restricted environment.
+- Never expose arbitrary host shell access to an agent by default.
 
-Potential integrations identified by the project direction:
-- LangGraph for workflow orchestration.
-- MCP for standardized tool integration.
-- Coding-agent adapters such as Codex, Claude Code, or OpenCode.
-- Retrieval and vector search for relevant project context.
-- Model providers and evaluation tooling.
+### Context and retrieval
+RAG/vector search is a later milestone. First define source provenance, access filtering, freshness, deletion behavior, and evaluation criteria. Retrieval results are context, not instructions or authorization.
 
-These are candidate integrations, not proof that each is wired into the current codebase. Confirm supported providers, MCP servers, storage engines, and deployment targets before implementation. Maintain an explicit allowlist.
+## 5. Task lifecycle
 
-## 7. Architectural patterns
+Initial proposed states:
 
-Prefer:
-- Explicit task state machines and typed workflow state.
-- Small modules with clear responsibilities.
-- Adapter interfaces for model and tool providers.
-- Policy checks outside model-generated decisions.
-- Structured logs and auditable events.
-- Idempotent operations where retries are possible.
-- Timeouts, bounded retries, cancellation, and clear failure propagation.
-- Tests for security and workflow invariants.
+- `queued`: accepted and awaiting worker execution.
+- `running`: worker is executing the task.
+- `needs_approval`: execution is paused pending a human decision.
+- `completed`: task reached a verified terminal success state.
+- `failed`: task ended with an unrecoverable error.
+- `cancelled`: task was cancelled and the worker acknowledged cancellation.
+- `blocked`: task cannot proceed because a required dependency or policy condition is unresolved.
 
-Avoid:
-- Letting model output directly authorize privileged actions.
-- Unbounded autonomous loops or unlimited retries.
-- Broad shell access by default.
-- Hidden state changes or silent failure-to-success conversions.
-- Duplicated provider-specific logic across the orchestration core.
-- Introducing distributed services before there is a demonstrated need.
+Initial transition model (enforce centrally in domain logic, not only in UI):
 
-## 8. Adding a feature
+```text
+queued -> running | cancelled | blocked
+running -> needs_approval | completed | failed | cancelled | blocked
+needs_approval -> running | cancelled | blocked
+blocked -> queued | cancelled
+completed, failed, cancelled -> terminal
+```
 
-1. Read `PRD.md`, this document, `AGENTS.md`, `docs/SECURITY.md`, `docs/TESTING.md`, and `CODE_STYLE.md`.
-2. Inspect the repository, current Git state, existing interfaces, and related tests.
-3. Check `.agent-state/ACTIVE-TASK.md` and coordinate with other agents before editing shared files.
-4. Define the user-visible behavior and acceptance criteria; ask for clarification if scope is ambiguous.
-5. Identify affected components, data flow, permissions, failure modes, and migration needs.
-6. Implement the smallest cohesive change using established patterns.
-7. Add or update unit, integration, workflow, and security tests as appropriate.
-8. Run relevant checks and record the exact commands and outcomes.
-9. Update docs if architecture, security boundaries, setup, or behavior changed.
-10. Report files changed, evidence, skipped checks, and remaining risks.
+A retry should be represented deliberately: either create a new task/attempt or define a controlled transition with attempt history. Never silently reopen a terminal task. Every transition records actor, timestamp, prior state, next state, and reason where applicable.
 
-## 9. Failure handling and observability
+## 6. API and event flow
 
-Represent errors explicitly, preserve useful diagnostic context without leaking secrets, and distinguish retryable from non-retryable failures. Record workflow transitions, policy decisions, approval outcomes, tool invocation metadata, and verification results. Avoid logging raw secrets or unnecessary sensitive input.
+1. Client sends `POST /api/v1/tasks`.
+2. API authenticates and validates the request, creates a task and durable dispatch record, then returns `202 Accepted` with `task_id`.
+3. Worker claims the job and changes `queued` to `running`.
+4. Worker emits persisted task events as stages change.
+5. Client consumes `GET /api/v1/tasks/{task_id}/events` via SSE and can fetch `GET /api/v1/tasks/{task_id}` for the authoritative snapshot.
+6. Approval-required tasks pause in `needs_approval`; a user decision resumes or cancels according to policy.
+7. Worker records final result, verification outcome, and audit events.
 
-## 10. Open architecture decisions
+SSE is server-to-client only. Use ordinary authenticated API requests for task creation, cancellation, and approval decisions. Define event IDs and reconnect behavior; do not rely on an in-memory event stream as the only record of important state changes.
 
-- CLI, web UI, or both for MVP.
-- Authentication and authorization model.
-- Task/event persistence and schema.
-- Initial agent adapter and supported MCP server/tool allowlist.
-- Sandbox/execution isolation mechanism.
-- RAG index and retrieval strategy.
-- Deployment target and secret-management approach.
-- Evaluation dataset, quality thresholds, and observability stack.
+## 7. Performance strategy
 
-Record material decisions as ADRs or in this section; do not silently treat proposals as approved implementation choices.
+Performance targets are initial budgets, not guarantees. Benchmark in a defined environment and revise with measured evidence.
+
+| Measure | Initial target |
+|---|---:|
+| Lightweight/cached API reads, p95 | < 100 ms |
+| Database-backed API reads, p95 | < 200 ms |
+| Task submission API, p95 | < 200 ms |
+| Core Web Vitals: INP | ≤ 200 ms |
+| Core Web Vitals: LCP | ≤ 2.5 s |
+| Animation | Aim for 60 FPS on representative hardware |
+
+Measure API server time separately from LLM/tool time and end-to-end task completion. Include warm/cold behavior and realistic concurrency in tests.
+
+### Backend
+- Keep request handlers short and use async I/O correctly.
+- Do not run LLM calls or agent graphs inline during submission.
+- Use bounded worker concurrency, timeouts, connection pools, and query limits.
+- Avoid N+1 queries and repeated serialization of large payloads.
+- Cache only data with a clear invalidation policy.
+- Add tracing/timing around database, queue, LLM, tool, and verification stages.
+- Stream progress rather than making clients wait for the final result.
+
+### Frontend
+- Keep Client Components focused; prefer Server Components for static content.
+- Lazy-load heavy editors, graph visualizations, and advanced views.
+- Minimize unnecessary rerenders and large client bundles.
+- Batch/throttle progress events before updating expensive UI.
+- Use skeletons and immediate feedback; use optimistic updates only where rollback is safe.
+- Prefer transform/opacity animations; respect `prefers-reduced-motion`.
+- Avoid excessive backdrop blur, giant animated surfaces, and expensive effects in high-frequency views.
+
+## 8. Reliability and observability
+- Structured logs with request ID, task ID, worker attempt, and stage.
+- Metrics for API latency, queue wait, job duration, failures, retries, DB pool saturation, SSE disconnects, and tool latency.
+- Trace each task across API, queue, worker, graph, tools, and verification.
+- Explicit timeouts, cancellation, retry limits, dead-letter/recovery policy, and shutdown handling.
+- Health/readiness checks should distinguish API health from worker/queue readiness.
+- Never log secrets, credentials, raw sensitive prompts, or unrestricted tool output by default.
+
+## 9. Security boundaries
+- Authenticate every non-public endpoint; authorize access to each task and event stream.
+- Validate all user input and tool arguments.
+- Store secrets outside source control; redact logs.
+- Apply least privilege to database credentials, tools, and MCP servers.
+- Use sandboxed execution for shell and repository changes, with filesystem/network restrictions.
+- Require approval for high-impact actions; record the approver and decision.
+- Apply limits for payloads, execution time, output size, concurrency, and spending where provider support permits.
+- See `docs/SECURITY.md`.
+
+## 10. Testing and release gates
+- Unit tests for task transitions, idempotency, policy decisions, and event serialization.
+- API tests for validation, authorization, status codes, error contracts, and SSE reconnect behavior.
+- Worker/graph integration tests for success, failure, timeout, retry, cancellation, and approval pause/resume.
+- Frontend tests for core interactions, keyboard access, reduced motion, loading/error/empty states.
+- Performance tests for API p50/p95/p99, queue wait, concurrent tasks, and frontend Core Web Vitals.
+- Do not claim targets are met until test output and environment are recorded.
+
+## 11. Delivery sequence
+1. Repository audit and source-of-truth reconciliation.
+2. Developer foundation and task-domain lifecycle with tests.
+3. FastAPI task API, CLI, and dashboard against the same contract.
+4. Durable background execution and minimal LangGraph workflow.
+5. SSE progress, checkpointing, approval pause/resume, cancellation, recovery.
+6. Tool gateway and MCP with policy enforcement.
+7. Retrieval/context and evaluation.
+8. Performance hardening and deployment.
+
+## 12. Decisions to record before production
+- Python and Node package managers/versions.
+- Durable job-dispatch implementation and outbox/recovery strategy.
+- Authentication and tenancy model.
+- Deployment topology and supported sandbox.
+- LLM providers, budgets, and model-routing policy.
+- Retention/privacy policy for prompts, logs, checkpoints, and repository contents.

@@ -1,100 +1,95 @@
 # Development Plan
 
-**Status:** Proposed sequencing. Reconcile with the actual repository and obtain owner approval before broad implementation.
+**Current direction:** Owner-selected MVP: Next.js + shadcn/ui dashboard, FastAPI + LangGraph backend, Python CLI, PostgreSQL, and Redis only where justified.
 
 ## Working rules
+- `PRD.md` defines product scope and acceptance criteria.
+- `SPEC.md` defines initial API/task contracts.
+- `ARCHITECTURE.md` defines system boundaries and performance/reliability principles.
+- `AGENTS.md` and existing tool-specific instructions define agent behavior.
+- Preserve current skills, configurations, user changes, and repository-specific conventions.
+- Each milestone has acceptance criteria and a testable handoff.
+- Do not claim implementation, test success, or performance results without evidence.
 
-- Treat `PRD.md` as product scope and acceptance criteria.
-- Treat `ARCHITECTURE.md` as a proposed design until decisions are confirmed.
-- Do not start broad implementation while material scope/security decisions remain unresolved.
-- Each milestone needs acceptance criteria, tests, and a clear handoff.
-- Update `.agent-state/CURRENT.md` when the active milestone or verified repository state changes.
+## Milestone 0 — Documentation and decision alignment
+- [x] Record the selected MVP interface and backend.
+- [x] Define the fast request path and asynchronous worker principle.
+- [x] Define an initial task lifecycle and performance budgets.
+- [ ] Reconcile every source-of-truth document with the actual local tree and existing instructions.
+- [ ] Confirm package managers/runtime versions and durable dispatch strategy.
 
-## Milestone 0 — Documentation and decisions
-
-- [x] Capture product, architecture, agent, security, style, design-system, and testing guidance in a reviewable draft.
-- [ ] Confirm PRD, non-goals, and MVP acceptance criteria.
-- [ ] Confirm the actual current repository tree and reconcile these drafts with existing files.
-- [ ] Resolve or explicitly defer key MVP decisions.
-
-**Exit criteria:** Owner-reviewed source-of-truth documents; conflicts and open decisions visible.
+**Exit:** Consistent documents and visible remaining decisions.
 
 ## Milestone 1 — Repository and developer foundation
+- Audit tracked/untracked files, Git state, existing package managers, and tool instructions.
+- Propose a target folder layout without moving existing files until approved.
+- Select Python/Node versions and package managers.
+- Establish formatting, lint, type-check, test, and local run commands.
+- Add environment examples with placeholders only.
+- Add minimal CI only after identifying current conventions.
 
-- Inspect the actual application stack, dependency management, and current code.
-- Establish or verify setup, formatting, lint, type-check, and test commands.
-- Add a minimal CI baseline if requested and compatible with the repo.
-- Establish environment examples and secret-handling guidance.
-
-**Exit criteria:** Reproducible local setup and verified baseline checks.
+**Exit:** Reproducible setup and baseline checks.
 
 ## Milestone 2 — Core task domain
+- Implement task model and explicit lifecycle transition function.
+- Add task attempts, transition history, timestamps, and stable error semantics.
+- Add unit tests for valid/invalid transitions, terminal states, cancellation, and retry semantics.
+- Select PostgreSQL schema and migration tooling.
 
-- Define task schema, acceptance criteria, status model, and allowed transitions.
-- Implement validation and persistence selected by owner.
-- Add unit tests for lifecycle invariants and invalid transitions.
+**Exit:** Domain rules are test-covered and independent of web/CLI presentation.
 
-**Exit criteria:** Task records and state transitions are test-covered.
+## Milestone 3 — FastAPI contract and CLI
+- Implement task submission, read, cancellation, and approval API contracts as appropriate.
+- Submission persists task and dispatch intent, then returns `202 Accepted`.
+- Implement CLI commands through the API.
+- Add authentication/authorization stubs only if clearly marked; do not ship unprotected production endpoints.
+- Add API integration tests.
 
-## Milestone 3 — Workflow orchestration
+**Exit:** CLI can create/read a task using the same contract as the dashboard.
 
-- Implement a minimal LangGraph workflow with explicit state and bounded transitions.
-- Separate planning, execution, verification, and final reporting.
-- Add timeout, cancellation, retry, and failure paths.
+## Milestone 4 — Dashboard foundation
+- Build Next.js App Router app and configure shadcn/ui using `Design-system.md`.
+- Implement task list/detail and loading, empty, error, approval, and terminal states.
+- Keep initial bundle and client state small.
+- Add accessible keyboard, focus, reduced-motion, and responsive behavior tests.
 
-**Exit criteria:** End-to-end workflow tests demonstrate success and failure paths.
+**Exit:** Core dashboard flows work against the shared API contract.
 
-## Milestone 4 — Controlled tools and MCP
+## Milestone 5 — Durable background execution and LangGraph
+- Choose and document queue, transactional dispatch/outbox, retry, and recovery design.
+- Add worker lifecycle and bounded concurrency.
+- Implement minimal LangGraph stages: plan, execute placeholder/safe adapter, verify, report.
+- Add timeout, cancellation, idempotency, retry, failure, and restart tests.
 
-- Define tool allowlist and adapter contract.
-- Add schema validation, permissions, audit events, and execution constraints.
-- Add approval gates for consequential operations.
+**Exit:** API submission is decoupled from graph execution and worker recovery behavior is tested.
 
-**Exit criteria:** Disallowed calls and approval bypass attempts are blocked by tests.
+## Milestone 6 — SSE and human approval
+- Publish task progress and lifecycle events.
+- Add event IDs, reconnect behavior, snapshot reconciliation, and authorization.
+- Implement approval pause/resume and cancellation semantics.
 
-## Milestone 5 — Project context and retrieval
+**Exit:** Dashboard and CLI can observe progress and recover current state after reconnect.
 
-- Load repository instructions and relevant files.
-- Add retrieval only after selecting data sources and indexing strategy.
-- Treat retrieved content as untrusted and test prompt-injection resistance.
+## Milestone 7 — Tool gateway and MCP
+- Add explicit tool registry/allowlist and adapter contract.
+- Validate inputs and outputs; bound time, output size, concurrency, and permissions.
+- Add sandboxed execution, audit events, and approval gates.
+- Test denied-by-default behavior.
 
-**Exit criteria:** Relevant context is traceable and cannot override trusted policy.
+**Exit:** Tool execution is governed and auditable.
 
-## Milestone 6 — Audit and human oversight
+## Milestone 8 — Context/RAG and evaluation
+- Add retrieval only after source provenance, access filtering, freshness, and deletion behavior are defined.
+- Evaluate retrieved context and agent outcomes against repeatable datasets.
+- Track quality, latency, cost, and failure modes.
 
-- Persist task events, approvals, tool outcomes, and verification evidence.
-- Implement pause/resume and rejected-approval behavior.
-- Ensure reports distinguish actual evidence from model claims.
+**Exit:** Evaluation results are reproducible and documented.
 
-**Exit criteria:** Approval lifecycle and audit history are tested.
+## Milestone 9 — Performance and hardening
+- Benchmark API p50/p95/p99 under documented load.
+- Measure queue wait, worker throughput, DB pool utilization, LLM/tool timing, and failure recovery.
+- Measure frontend INP/LCP and representative interaction frame rate.
+- Optimize based on profiling; do not use performance claims without results.
+- Review secrets, authorization, tenant isolation, sandbox, retention, and operational recovery.
 
-## Milestone 7 — Evaluation and observability
-
-- Build a versioned evaluation set and explicit scoring criteria.
-- Track completion, policy compliance, verification quality, failures, and latency/cost where available.
-- Establish a baseline before optimization.
-
-**Exit criteria:** Results are reproducible and do not rely solely on model self-assessment.
-
-## Milestone 8 — Interface
-
-- Confirm CLI/web interface and user workflows.
-- Implement shared components using `Design-system.md`.
-- Add responsive, keyboard, focus, loading, empty, and error states.
-
-**Exit criteria:** Core task lifecycle is usable and accessibility checks are recorded.
-
-## Milestone 9 — Hardening and release readiness
-
-- Review security boundaries, dependency posture, logs, retention, and deployment configuration.
-- Run functional, integration, security, and evaluation suites.
-- Document known limitations and rollback/recovery approach.
-
-**Exit criteria:** Release checklist completed with evidence; unresolved risks accepted by the owner.
-
-## Open decisions blocking detailed implementation
-
-- MVP interface and authentication model.
-- First agent adapter and MCP tool/server allowlist.
-- Persistence, sandboxing, retrieval, and deployment technologies.
-- Evaluation dataset and release thresholds.
+**Exit:** Measured performance and reliability results with documented limitations.

@@ -1,79 +1,69 @@
 # Testing Strategy
 
-**Status:** Test strategy baseline. Exact commands must be taken from the actual repository and marked verified only after execution.
+## Principles
+- Test domain invariants independently from infrastructure.
+- Prefer deterministic tests with fake model/tool adapters.
+- Run the relevant checks for every change and report exact commands/results.
+- Performance targets remain unverified until benchmark output is recorded with environment and load details.
 
-## 1. Objectives
+## Unit tests
+- Task lifecycle: valid and invalid transitions, terminal states, blocked tasks, cancellation, approval, retry/attempt semantics.
+- Domain and policy: authorization decisions, tool allowlists, argument validation, timeout mapping, output limits.
+- Event contracts: serialization, event IDs, state snapshot consistency.
+- Frontend utilities: API error handling, state mapping, progress batching.
 
-Verify functional behavior, workflow invariants, tool permissions, failure handling, and truthful reporting. An agent's assertion that work is correct is not a substitute for independent checks.
+## API integration tests
+- Task submission returns `202` and a stable task identifier after durable acceptance.
+- Invalid payloads and unauthorized requests are rejected with stable error contracts.
+- Task access and SSE streams enforce ownership.
+- Queue/dispatch failure does not leave a falsely accepted task without recoverable dispatch intent.
+- Cancellation distinguishes request acceptance from confirmed cancellation.
+- Approval is accepted only when the task is awaiting the decision.
+- SSE reconnects can recover the current task state.
 
-## 2. Test layers
+## Worker and LangGraph integration tests
+- Successful completion and verification.
+- Tool/model failure, timeout, retry exhaustion, cancellation, and blocked state.
+- Approval pause and resume.
+- Duplicate delivery/idempotency.
+- Worker restart and checkpoint/recovery behavior.
+- Bounded concurrency and graceful shutdown.
+- Use fake adapters in normal CI; live-provider tests should be opt-in and separately labeled.
 
-### Unit tests
-Test pure functions, input validation, task-state transitions, policy decisions, serialization, and error classification.
+## Frontend tests
+- Task creation and detail view.
+- Loading, empty, success, error, blocked, approval, cancelled, and reconnecting states.
+- Keyboard navigation, focus handling, accessible names, responsive layout, reduced motion.
+- SSE reconnect and state reconciliation.
+- Avoid tests that depend on arbitrary fixed delays when event/state assertions are possible.
 
-### Integration tests
-Test interactions between the workflow engine, persistence, agent adapters, context retrieval, tool gateway, and verification service using controlled fixtures or test doubles where appropriate.
+## Performance tests
+Record OS/runtime versions, hardware, dependency versions, dataset, concurrency, duration, warm/cold conditions, and exact command.
 
-### End-to-end tests
-Exercise a representative task from submission through planning, approval pause/resume, verification, and final report.
+Measure separately:
+- API server latency p50/p95/p99.
+- Database-backed read latency.
+- Task submission latency.
+- Queue wait time.
+- LLM and tool latency.
+- End-to-end task duration.
+- Worker throughput and failure rate.
+- Database pool saturation and event-loop blocking.
+- Frontend LCP, INP, bundle size, and representative animation/frame behavior.
 
-### Security tests
-Cover the cases listed in `docs/SECURITY.md`, including unauthorized access, disallowed tools, prompt injection, approval bypass, path traversal, and secret leakage.
+Initial budgets:
+- Lightweight/cached reads p95 < 100 ms.
+- Database-backed reads p95 < 200 ms.
+- Task submission p95 < 200 ms.
+- INP ≤ 200 ms; LCP ≤ 2.5 s.
+- Aim for 60 FPS on representative hardware.
 
-### Agent/workflow evaluations
-Use a versioned set of representative tasks with explicit expected properties. Measure correctness, acceptance-criteria coverage, tool-policy compliance, verification quality, cost/latency where available, and failure modes. Keep evaluation criteria separate from model self-reports.
+Do not combine LLM wait time with API server latency when assessing the submission endpoint.
 
-## 3. Workflow invariants
-
-- Only documented state transitions are accepted.
-- A task cannot be marked complete when required verification is failing, blocked, or not run.
-- A gated action cannot execute before a valid approval.
-- Denied tool calls cannot reach the execution layer.
-- Retry limits and timeouts are enforced.
-- Audit events preserve the sequence of important decisions.
-- Final reports distinguish verified facts from assumptions and unresolved risks.
-
-## 4. Test design
-
-- Include success, invalid input, empty state, error, timeout, cancellation, permission denial, and retry cases.
-- Prefer deterministic fixtures and isolated temporary workspaces.
-- Mock external providers for unit tests; classify live-provider tests as integration tests.
-- Keep tests independent of secret credentials.
-- Add regression tests for every fixed defect that can be reproduced.
-- Avoid asserting only that a model produced plausible text; assert structured outcomes and policy invariants.
-
-## 5. Result classifications
-
-Use these labels in task reports:
-- **PASS:** Command completed successfully and evidence supports the check.
-- **FAIL:** Check ran and failed.
-- **SKIPPED:** Intentionally not run under the current test selection.
-- **NOT RUN:** Not executed.
-- **BLOCKED:** Could not execute because of a dependency, permission, environment, or external blocker.
-- **INCONCLUSIVE:** Ran but did not provide enough evidence to determine the outcome.
-
-Never aggregate skipped, blocked, or inconclusive checks into a passing result.
-
-## 6. Running tests
-
-Before documenting commands:
-1. Inspect package/dependency manifests, test configuration, CI workflows, and README.
-2. Use the existing supported commands and versions.
-3. Run the narrowest relevant test first, then broader checks if feasible.
-4. Record the exact command and observed outcome.
-5. Document environment prerequisites and any unavailable integration tests.
-
-No commands are specified here because the actual repository stack and configured scripts must be inspected before declaring them valid.
-
-## 7. Continuous integration
-
-Where CI is configured, run deterministic unit and policy tests on each change. Add integration and security checks according to their runtime and environment needs. Keep secrets out of pull-request logs and use least-privilege CI credentials.
-
-## 8. Definition of done
-
-- Relevant tests added or updated.
-- Relevant checks run, with exact results recorded.
-- Failures fixed or explicitly reported.
-- Skipped or blocked checks clearly identified.
-- Security-sensitive paths and negative cases considered.
-- Documentation and acceptance criteria updated when behavior changes.
+## Suggested quality gates
+Choose tools after inspecting current conventions. Typical candidates:
+- Python: pytest, Ruff, mypy or Pyright.
+- TypeScript: ESLint, TypeScript compiler, Vitest or Jest, Playwright for browser flows.
+- API: FastAPI TestClient/HTTPX.
+- Performance: Locust, k6, or a small repeatable HTTP benchmark.
+Do not install every candidate automatically. Select a minimal set and document the reason.
