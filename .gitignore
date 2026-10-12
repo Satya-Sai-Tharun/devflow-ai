@@ -34,3 +34,12 @@ Thumbs.db
 *.log
 tmp/
 temp/
+
+# Generated knowledge graph output and cache
+graphify-out/
+
+# AI agent tooling (installed skills, configs, rules, workflows)
+.agents/
+.claude/
+.codex/
+.opencode/
