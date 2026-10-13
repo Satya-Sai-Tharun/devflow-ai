@@ -131,6 +131,8 @@ completed, failed, cancelled -> terminal
 
 A retry should be represented deliberately: either create a new task/attempt or define a controlled transition with attempt history. Never silently reopen a terminal task. Every transition records actor, timestamp, prior state, next state, and reason where applicable.
 
+**Known gap (unresolved):** this transition set cannot express a rejected or expired approval, because `failed` is unreachable from `needs_approval`. `SPEC.md` § Known gap documents the issue and [`docs/decisions/0010-approval-outcome-transitions.md`](docs/decisions/0010-approval-outcome-transitions.md) records the recommended resolution. This must be decided before the domain transition function is implemented.
+
 ## 6. API and event flow
 
 1. Client sends `POST /api/v1/tasks`.

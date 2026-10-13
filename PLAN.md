@@ -15,10 +15,34 @@
 - [x] Record the selected MVP interface and backend.
 - [x] Define the fast request path and asynchronous worker principle.
 - [x] Define an initial task lifecycle and performance budgets.
-- [ ] Reconcile every source-of-truth document with the actual local tree and existing instructions.
-- [ ] Confirm package managers/runtime versions and durable dispatch strategy.
+- [x] Reconcile every source-of-truth document with the actual local tree and existing instructions.
+- [ ] Confirm package managers/runtime versions and durable dispatch strategy — **proposed** in [`docs/decisions/0007`](docs/decisions/0007-runtime-and-package-managers.md) and [`0002`](docs/decisions/0002-durable-job-dispatch.md); awaiting owner approval.
 
-**Exit:** Consistent documents and visible remaining decisions.
+**Exit:** Consistent documents and visible remaining decisions. *(Documentation is consistent; ten decisions are recorded as Proposed in [`docs/decisions/`](docs/decisions/README.md).)*
+
+### Milestone 0 deliverables (completed in this pass)
+- [`PROJECT_CONTEXT.md`](PROJECT_CONTEXT.md) reconciled to the verified tree (it did not previously exist).
+- [`docs/DOCUMENTATION_INDEX.md`](docs/DOCUMENTATION_INDEX.md) — source-of-truth map, ownership, staleness, and change-management rules.
+- New specifications: [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md), [`docs/API_CONTRACTS.md`](docs/API_CONTRACTS.md), [`docs/AGENT_RUNTIME.md`](docs/AGENT_RUNTIME.md), [`docs/DATABASE.md`](docs/DATABASE.md), [`docs/REQUIREMENTS_TRACEABILITY.md`](docs/REQUIREMENTS_TRACEABILITY.md).
+- [`docs/decisions/`](docs/decisions/README.md) — ADRs 0001–0010 recording the previously unwritten decisions.
+- One open specification gap surfaced and documented: rejected/expired approval transitions ([`0010`](docs/decisions/0010-approval-outcome-transitions.md)). This blocks Milestone 2 until decided.
+
+### Decisions blocking Milestone 1
+Decisions are listed in the order they must be resolved, because several of them constrain the **database schema**, not just the milestone that consumes them.
+
+| Decision | ADR | Must be resolved before | Why this early |
+|---|---|---|---|
+| Runtime versions and package managers | [0007](docs/decisions/0007-runtime-and-package-managers.md) | Any scaffolding, lockfile, or CI | Nothing is installable without it; it also decides single-package vs monorepo, which changes layout and import paths |
+| Authentication and tenancy | [0003](docs/decisions/0003-auth-and-tenancy.md) | **Milestone 2 schema**, not only Milestone 3 | The tenancy boundary determines whether `tasks.owner_id`/`tenant_id` exist and whether every query carries a scope predicate. Adding tenancy after the first migration is a schema change plus an authorization audit; do it first |
+| Durable job dispatch and recovery | [0002](docs/decisions/0002-durable-job-dispatch.md) | **Milestone 2 schema** (outbox), enforced in Milestone 5 | The chosen mechanism fixes the outbox shape, status vocabulary, and lease semantics that the migration will freeze |
+| Database identity and migrations | [0008](docs/decisions/0008-database-identity-and-migrations.md) | Milestone 2 schema | Decides primary/public identity split and the migration tool; depends on the ORM/driver choice, which currently has no owning ADR |
+| Approval outcome transitions | [0010](docs/decisions/0010-approval-outcome-transitions.md) | **Milestone 2 transition function** | `SPEC.md` has no legal transition for a rejected or expired approval. This **hard-blocks** the transition function and its test matrix — it is not deferrable to the approval milestone |
+| Deployment topology | [0004](docs/decisions/0004-deployment-topology.md) | Local dev stack, health/readiness contract | Determines the compose surface and whether health endpoints exist at all |
+| Model provider strategy and spend controls | [0005](docs/decisions/0005-model-provider-strategy.md) | Milestone 5 | Numeric spend ceilings and a global model-call concurrency limit are still absent |
+| Tool execution sandbox | [0009](docs/decisions/0009-tool-execution-sandbox.md) | Milestone 7 | Sandbox bounds (timeout, memory, egress) have no values yet |
+| Data retention and privacy | [0006](docs/decisions/0006-data-retention-and-privacy.md) | Before any content is stored | Security requirements `SR-23` and `SR-24` are unverifiable until this is Accepted |
+
+**Not every decision blocks Milestone 1.** Only `0007`, `0003`, `0008`, `0002`, and `0010` block the first two milestones; the rest unblock later ones. Resolve them in the order above.
 
 ## Milestone 1 — Repository and developer foundation
 - Audit tracked/untracked files, Git state, existing package managers, and tool instructions.
@@ -27,6 +51,7 @@
 - Establish formatting, lint, type-check, test, and local run commands.
 - Add environment examples with placeholders only.
 - Add minimal CI only after identifying current conventions.
+- Wire the existing documentation validator ([`tools/validate-docs.ps1`](tools/validate-docs.ps1)) into that CI as the first gate. It already runs and passes locally (see [`docs/DOCUMENTATION_INDEX.md`](docs/DOCUMENTATION_INDEX.md) § 7); no CI exists yet, so it is currently a manual step.
 
 **Exit:** Reproducible setup and baseline checks.
 
@@ -43,6 +68,7 @@
 - Submission persists task and dispatch intent, then returns `202 Accepted`.
 - Implement CLI commands through the API.
 - Add authentication/authorization stubs only if clearly marked; do not ship unprotected production endpoints.
+- **`ADR 0003` must be Accepted before this milestone starts**, not merely before deployment: the tenancy decision from Milestone 2 determines the authorization predicate on every endpoint here. A stub that returns a fixed principal is acceptable **only** in tests and local development, must be impossible to enable in a deployed configuration, and must be marked in code as a stub with a test asserting it cannot be reached when the real mechanism is configured. Milestone exit criteria must **not** be claimed on the strength of a stub.
 - Add API integration tests.
 
 **Exit:** CLI can create/read a task using the same contract as the dashboard.

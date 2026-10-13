@@ -1,4 +1,4 @@
-﻿# Secrets and local environment
+# Secrets and local environment
 .env
 .env.*
 !.env.example
@@ -16,6 +16,8 @@ __pycache__/
 .ruff_cache/
 .venv/
 venv/
+.coverage
+htmlcov/
 
 # Node.js
 node_modules/
@@ -23,15 +25,27 @@ node_modules/
 dist/
 build/
 coverage/
+*.tsbuildinfo
+.turbo/
 
 # Local tools and operating system
 .DS_Store
+._*
 Thumbs.db
+ehthumbs.db
+[Dd]esktop.ini
 .vscode/
 .idea/
+*.swp
+*.swo
+*~
 
 # Logs and temporary files
 *.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
 tmp/
 temp/
 
@@ -43,3 +57,5 @@ graphify-out/
 .claude/
 .codex/
 .opencode/
+.gemini/
+.antigravity/

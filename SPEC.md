@@ -53,6 +53,18 @@ Allowed transitions:
 
 Record actor, timestamp, from/to states, reason, and attempt where applicable. Retries must be explicit and idempotent; do not silently reopen terminal tasks.
 
+### Known gap: approval rejection and expiry have no transition
+
+The table above cannot express two of the three approval outcomes required by PR-007 and specified in [`docs/API_CONTRACTS.md`](docs/API_CONTRACTS.md):
+
+| Approval outcome | Expressed by the table above? |
+|---|---|
+| Approved | Yes — `needs_approval` → `running` |
+| **Rejected** | **No.** `cancelled` conflates a declined action with a user cancellation; `blocked` implies a resolvable external dependency. |
+| **Expired** | **No.** `failed` is not reachable from `needs_approval`; silence is not consent, so returning to `running` is unacceptable. |
+
+**Status: unresolved — owner decision required.** The recommended resolution is recorded in [`docs/decisions/0010-approval-outcome-transitions.md`](docs/decisions/0010-approval-outcome-transitions.md): add `failed` as an allowed transition from `needs_approval`, with distinct machine-readable reason codes for rejection and expiry. Until the owner decides, the transition set above remains authoritative and the Milestone 2 transition function is blocked.
+
 ## Error semantics
 Use consistent structured errors with a stable machine-readable code, human-readable message, request/correlation ID, and field details where appropriate. Do not leak stack traces, secrets, internal paths, or provider credentials.
 

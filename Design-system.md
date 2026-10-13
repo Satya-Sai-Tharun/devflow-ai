@@ -1,12 +1,12 @@
 # DevFlow AI Design System
 
-**Status:** Initial direction for the MVP. Reconcile tokens with existing design assets before changing code. Use shadcn/ui as the component foundation; do not introduce a second component system without a clear reason.
+**Status:** Initial direction for the MVP. **No design assets, token files, or theme configuration currently exist in this repository** — this document is the only source, and its values are provisional until applied and reviewed in a running app. Do not refer to "existing" design assets or an "existing" theme: there are none. Use shadcn/ui as the component foundation; do not introduce a second component system without a clear reason.
 
 ## Product experience
 DevFlow AI is a developer-focused workflow console. The UI should feel precise, fast, calm, information-dense without clutter, and trustworthy during long-running operations. Status and control should be more prominent than decoration.
 
 ## Visual tokens
-Starter tokens from the project reference; treat as provisional until applied and reviewed in the app.
+Starter tokens. Treat as provisional until applied and reviewed in the app. **Several semantic tokens have no value yet** — see the note below the table.
 
 | Token | Value | Usage |
 |---|---|---|
@@ -22,6 +22,8 @@ Starter tokens from the project reference; treat as provisional until applied an
 | Info | Semantic token | Neutral progress and informational notices |
 
 Define light/dark tokens through CSS variables compatible with shadcn/ui. Do not hardcode status colors throughout components. Check text/background contrast; color alone must not communicate task state.
+
+> **Incomplete — do not treat this table as a finished palette.** Only Primary, Accent, Background, Surface, Border, and Muted text have values. Undefined and required before a coherent theme can be built: **Success, Warning, Danger, and Info values** (currently the placeholder text "Semantic token"); **every dark-mode value**, even though dark tokens are mandated above; the remaining shadcn slots (`secondary`, `muted` background, `destructive`, `ring`, `input`, `popover`, and all `*-foreground` variants); status colors for each of the seven lifecycle states; and the concrete decision of whether variables are stored as hex, as `H S L` triplets, or as `oklch`, and whether this targets Tailwind v3 config or v4 `@theme`. Also note that `Primary` here is a near-black **text** color while `Accent` carries the "primary emphasis" role — that inverts common shadcn naming, so the mapping must be written down deliberately rather than assumed. Record these as a design-token ADR before implementing the theme. The generic third-party design-system skills under the gitignored `.agents`/`.claude`/`.opencode` trees supply their own palettes and radius scales that **contradict** this brand; they may supply mechanics, never design authority.
 
 ## Typography
 - Typeface: Inter or a system-compatible sans-serif fallback.
@@ -49,10 +51,14 @@ Every async workflow surface should account for:
 - needs approval
 - success/completed
 - blocked
-- failed/retryable
+- failed (terminal — see note)
 - cancelled
 - disconnected/reconnecting
-- permission denied
+
+**Two corrections to this list, both resolved against the authoritative documents:**
+
+1. **"permission denied" is deliberately not a distinct state.** `docs/API_CONTRACTS.md` §4.6 makes a resource outside the caller's authorization boundary indistinguishable from a nonexistent one (a uniform `not_found`), on purpose, to prevent enumeration. A distinct "permission denied" surface is therefore **unreachable** and, if built, would leak the very distinction the API refuses to reveal. Render the `not_found` response as an ordinary not-found state. Do not attempt to infer authorization failures from response shape.
+2. **`failed` is terminal, not retryable.** `SPEC.md` makes `failed` a terminal state, and no retry endpoint exists — re-running work means a **new task or a new explicit attempt**, never reopening a terminal task. So do not render a bare "Retry" control on a `failed` task that would call a nonexistent endpoint. If a retry affordance is wanted, it must be specified as a new-task/new-attempt flow first; that is recorded as an open decision in `docs/API_CONTRACTS.md` §10 row 15.
 
 Define semantic variants for buttons (default, secondary, outline, ghost, destructive) and statuses (queued, running, needs approval, completed, failed, cancelled, blocked). Avoid relying on color alone; include text and/or icon.
 
@@ -88,7 +94,6 @@ Define semantic variants for buttons (default, secondary, outline, ghost, destru
 - Measure bundle size, Core Web Vitals, and interaction responsiveness before and after major UI changes.
 
 ## Implementation rules
-- Define tokens as CSS variables and map them into Tailwind/shadcn theme conventions.
-- Reuse existing theme/configuration before generating new configuration.
-- Do not replace the existing design system or UI/UX skill files wholesale.
+- Define tokens as CSS variables and map them into Tailwind/shadcn theme conventions. **There is no existing theme or Tailwind configuration to reuse** — it does not exist yet and must be created.
+- Do not create a second, competing token system, and do not let a third-party skill's palette override this document's brand values.
 - Avoid arbitrary one-off colors, spacing, radii, and motion values.

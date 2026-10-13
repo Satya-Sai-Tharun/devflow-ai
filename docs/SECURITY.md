@@ -2,6 +2,8 @@
 
 This is a design baseline, not a claim that controls are already implemented or independently audited.
 
+**Scope of this document vs [`THREAT_MODEL.md`](THREAT_MODEL.md):** this file is the concise baseline and review checklist. [`THREAT_MODEL.md`](THREAT_MODEL.md) is authoritative for the full analysis — assets, trust boundaries, STRIDE and AI-specific threats, the 25 testable security requirements (`SR-01`…`SR-25`), and the threat-to-test plan. Where this checklist is terse, the threat model carries the reasoning and the verification method. Neither document may weaken the other.
+
 ## Identity and authorization
 - Authenticate every non-public API endpoint.
 - Authorize every task read, event stream, cancellation, approval, and result access against the caller and tenant/project boundary.
@@ -40,10 +42,15 @@ This is a design baseline, not a claim that controls are already implemented or 
 - Define incident response, credential rotation, and data deletion procedures before production use.
 
 ## Security review checklist
-- [ ] Authentication and authorization tests cover task and SSE access.
-- [ ] Secrets are absent from tracked files and logs.
-- [ ] Tools are deny-by-default and permission-scoped.
-- [ ] Sandbox restrictions are tested.
-- [ ] Approval gates cannot be bypassed through alternate API/CLI paths.
-- [ ] Request, execution, concurrency, and output limits are enforced.
-- [ ] Retention and deletion policy is documented.
+
+Each item maps to a testable requirement in [`THREAT_MODEL.md`](THREAT_MODEL.md). All items are **unchecked**: the repository contains no application code and no tests, so none of these controls exists or has been verified.
+
+- [ ] Authentication and authorization tests cover task and SSE access. → `SR-01`, `SR-02`, `SR-03`
+- [ ] Secrets are absent from tracked files and logs. → `SR-15`
+- [ ] Tools are deny-by-default and permission-scoped. → `SR-05`, `SR-06`, `SR-07`
+- [ ] Sandbox restrictions are tested. → `SR-10`, `SR-24`
+- [ ] Approval gates cannot be bypassed through alternate API/CLI paths. → `SR-11`, `SR-25`
+- [ ] Request, execution, concurrency, and output limits are enforced. → `SR-08`, `SR-12`, `SR-13`, `SR-18`
+- [ ] Retention and deletion policy is documented. → `SR-23`
+
+For every item, the corresponding row in [`REQUIREMENTS_TRACEABILITY.md`](REQUIREMENTS_TRACEABILITY.md) must link to real evidence before it is checked.
