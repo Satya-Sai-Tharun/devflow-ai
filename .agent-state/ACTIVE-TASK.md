@@ -1,5 +1,25 @@
 # Active Task
 
+**Task ID:** None
+**Status:** No active implementation task is established. Milestone 1 Task 1 is complete; implementation tasks require explicit owner authorization.
+**Last completed task:** M1-T2 coordinator proposal cleanup. The proposal and ADR were removed under owner authorization; no coordinator was implemented.
+
+## Previous task record (M1-T2)
+
+M1-T2 compared coordination designs and recorded a local MCP + SQLite coordinator proposal. Installed Codex, OpenCode, and Claude MCP entry points were inspected, but cross-client interoperability was not tested. OpenCode configuration inspection failed because of a machine-local log access error; GitHub CLI was unavailable. No coordinator or client configuration was implemented. Its proposal and ADR were later removed under explicit owner authorization.
+
+## Previous task record (M1-T1)
+
+Task 1 governance was committed as `b7b6fe9` on `dev`. The universal documentation-validation rule and thin Copilot adapter were re-inspected for M1-T2; the committed diff for the requested files is empty. Historical Task 1 validation evidence: `git diff --check` passed; `powershell -File tools/validate-docs.ps1` passed (35 documents, 312 links, 4 Mermaid diagrams). No application test suite existed.
+
+---
+
+## Earlier task record (superseded)
+
+---
+
+## Previous task record (superseded)
+
 **Task ID:** ARCH-002
 **Title:** Reconcile the documentation set with the verified repository and create the missing implementation-ready specifications
 **Status:** Documentation changes applied locally. Not committed. No application code written.

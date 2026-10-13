@@ -6,7 +6,7 @@
 2. **Is that document current, or does it make claims that have not been verified?**
 3. **What else must change in the same commit set so the documents stay consistent?**
 
-**Verified against:** commit `e8a4d71` (`main`), plus the owner-decision reconciliation of 2026-10-13.
+**Verified against:** commit `b7b6fe9` (`dev`), plus the owner-decision reconciliation of 2026-10-13. Consult Git status and diff for uncommitted changes.
 
 ---
 
@@ -38,14 +38,14 @@ approval-outcome gap in `SPEC.md` stayed invisible (see [`decisions/0010`](decis
 | Performance budgets and benchmark protocol | [`PERFORMANCE.md`](PERFORMANCE.md) | Current | **Authoritative for budgets**; other docs must link here |
 | Visual tokens, components, states, accessibility, motion | [`../Design-system.md`](../Design-system.md) | Current | Tokens are provisional until reviewed in the app |
 | Engineering conventions (Python, TypeScript, API, Git) | [`../CODE_STYLE.md`](../CODE_STYLE.md) | Current | |
-| Universal agent rules and coordination protocol | [`../AGENTS.md`](../AGENTS.md) | Current | Read-first list is authoritative for agents |
+| Universal agent rules and single-agent development workflow | [`../AGENTS.md`](../AGENTS.md) | Current | Read-first list is authoritative for agents |
 | Milestone sequence and exit criteria | [`../PLAN.md`](../PLAN.md) | Current | Milestone 0 reconciled by this audit |
 | Requirement → component → test → evidence mapping | [`REQUIREMENTS_TRACEABILITY.md`](REQUIREMENTS_TRACEABILITY.md) | Current | Every row **Not started** — nothing is implemented |
-| Durable decision records | [`decisions/`](decisions/README.md) | **1 Accepted, 9 Proposed** | Proposed records are non-binding |
+| Durable decision records | [`decisions/`](decisions/README.md) | **8 Accepted, 3 Proposed** | Proposed records are non-binding |
 | Verified current milestone and status | [`../.agent-state/CURRENT.md`](../.agent-state/CURRENT.md) | Current | Verified against the real tree |
 | Active bounded task and handoff | [`../.agent-state/ACTIVE-TASK.md`](../.agent-state/ACTIVE-TASK.md) | Current | |
 | Automated documentation validation | [`../tools/validate-docs.ps1`](../tools/validate-docs.ps1) | Current | Passes; see § 7 for its limits |
-| Universal agent rules and coordination protocol | [`../AGENTS.md`](../AGENTS.md) | Current | Single universal entry point; includes the cross-agent support matrix |
+| Universal agent rules and single-agent development workflow | [`../AGENTS.md`](../AGENTS.md) | Current | Single universal entry point; includes the cross-agent support matrix |
 | Agent adapter files (tool-specific) | [`../CLAUDE.md`](../CLAUDE.md), [`../GEMINI.md`](../GEMINI.md), [`../.github/copilot-instructions.md`](../.github/copilot-instructions.md) | Current | Thin pointers to `AGENTS.md`; must never restate or contradict it |
 | Machine-local agent environment (gitignored) | `.agents/`, `.claude/`, `.codex/`, `.opencode/` | Mixed | Installed skills, plugins, hooks; **not** project policy and **not** portable |
 
@@ -82,18 +82,18 @@ Never promote a proposal to a decision, or a specification to an implementation,
 
 ## 4. Ownership and concurrency rules
 
-Because multiple agents and humans work on this repository:
+For work by agents and humans:
 
 1. **One writer per file per change set.** Two agents must not edit the same document concurrently.
 2. **Claim the subject, not just the file.** If you are changing the task lifecycle, you own
    `SPEC.md` **and** every restatement — coordinate before you start, not after.
-3. **Parallel agents work on disjoint subjects or review only.** Safe parallel sets are, for example:
+3. **One coding agent at a time is the default.** If the user explicitly authorizes parallel agents, they work on disjoint subjects or review only. Safe parallel sets are, for example:
    `Design-system.md` + dashboard docs, versus `DATABASE.md` + `decisions/0008`.
 4. **Never silently change an owner-approved decision.** Record a new ADR or a **Proposal** and ask.
 5. **Never weaken a security constraint** to make an implementation easier. Security changes require
    explicit owner approval and a corresponding `THREAT_MODEL.md` update.
-6. **`PROJECT_CONTEXT.md` and this index are high-contention files.** Treat edits to them as
-   coordination events: re-read immediately before writing, and re-verify links after.
+6. **`PROJECT_CONTEXT.md` and this index need careful edits.** Re-read immediately before writing,
+   then re-verify links.
 7. **Working-tree isolation.** For genuinely parallel work, use separate Git branches or worktrees
    rather than shared-tree editing. Do not change the repository's existing Git workflow without review.
 

@@ -57,6 +57,10 @@ Rules for adapter files:
 MVP: Next.js App Router + shadcn/ui dashboard; Python FastAPI API; LangGraph worker; Python CLI using the same API; PostgreSQL for durable state; Redis only when justified. Task submission must remain independent of full agent execution.
 
 ## Working protocol
+- Use one coding agent at a time by default. Codex is the primary coding agent unless the user explicitly selects another.
+- Run multiple coding agents concurrently only with explicit user authorization.
+- No CAO or local development-time multi-agent coordinator is required. Do not install or implement orchestration infrastructure without explicit authorization.
+- Define task scope, handoffs, and validation results explicitly, whether work is done by one agent or several.
 - Inspect current files, tracked/untracked changes, and recent commits before editing.
 - Preserve user changes, repository-specific rules, existing skills, and agent configuration.
 - Prefer small, coherent, testable diffs over broad rewrites.
@@ -67,6 +71,21 @@ MVP: Next.js App Router + shadcn/ui dashboard; Python FastAPI API; LangGraph wor
 - Do not run destructive commands or force-update dependencies without authorization.
 - Do not commit, push, publish, deploy, or create external resources unless explicitly asked.
 - Ask when a decision affects security, data retention, deployment, cost, or product scope.
+
+## Git branches and integration
+- `main` is the stable, reviewed release branch. `dev` is the integration branch for approved implementation work.
+- Use `feature/<short-description>` for feature implementation, `fix/<short-description>` for bug fixes, `test/<short-description>` for testing infrastructure or test-focused changes, `docs/<short-description>` for documentation-only work, and `chore/<short-description>` for tooling and maintenance. Branch names must be lowercase and use hyphens.
+- Before any branch operation, inspect `git status`, the current branch, `HEAD`, and available local and remote branches. Never create a branch without checking whether it already exists.
+- Feature branches start from the current, verified `dev` branch unless the task explicitly requires another base. Do not develop features directly on `main` or `dev`.
+- Integrate reviewed feature branches into `dev` through pull requests. Promote `dev` to `main` only through an explicitly authorized, reviewed release.
+- Never force-push, rewrite shared history, or bypass required checks. Never commit, push, merge, publish, or deploy without explicit owner authorization.
+
+## Agent isolation and handoffs
+- Use feature branches and separate Git worktrees when required by the branch rules below or to isolate concurrent tasks. If multiple coding agents are explicitly authorized, each implementation agent must use a separate worktree and task-specific branch; never let multiple agents write in the same worktree.
+- Assign one writer per feature and shared file. Establish file ownership, dependencies, and API/schema contracts before parallel implementation; reviewers may inspect concurrently but must not modify another agent's worktree.
+- Integrate reviewed feature branches through pull requests. Agents must not independently merge or push.
+- Keep task scope, blockers, decisions, validation evidence, and handoff details explicit in the task record or handoff. A shared coordination service is not required.
+- Do not assume independent CLI sessions can communicate automatically. Verify any actual messaging implementation before describing it as available.
 
 ## Engineering rules
 - Keep HTTP request handlers short; never await the full agent workflow during task submission.
@@ -82,6 +101,7 @@ MVP: Next.js App Router + shadcn/ui dashboard; Python FastAPI API; LangGraph wor
 
 ## Documentation rules
 - `docs/DOCUMENTATION_INDEX.md` § 2 defines which document is authoritative for each subject. Change the authoritative document, then update every document that restates it, in the same change set.
+- After any documentation change, run `powershell -File tools/validate-docs.ps1` and report the actual result in the handoff.
 - Never restate a contract in a second document; summarize and link instead.
 - Mark anything not owner-approved as **Proposed** or **Unresolved decision**. A proposal is not a decision and must not be cited as one.
 - `docs/PERFORMANCE.md` is authoritative for performance budgets. Record a benchmark only with environment, workload, concurrency, duration, percentiles, and the exact command.
