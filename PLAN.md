@@ -58,7 +58,7 @@
 - Add minimal CI only after identifying current conventions.
 - Wire the existing documentation validator ([`tools/validate-docs.ps1`](tools/validate-docs.ps1)) into that CI as the first gate. It already runs and passes locally (see [`docs/DOCUMENTATION_INDEX.md`](docs/DOCUMENTATION_INDEX.md) § 7); no CI exists yet, so it is currently a manual step.
 
-**Current status:** M1-T1 API foundation and PostgreSQL acceptance verification are complete on the uncommitted feature/m1-api-foundation branch. Human review and CI remain outstanding, so Milestone 1 is not complete.
+**Current status:** M1-T1 API foundation and PostgreSQL acceptance verification were merged into `dev` by PR #2 (`f373ebc`). CI remains outstanding, so Milestone 1 is not complete.
 
 **Exit:** Reproducible setup and baseline checks.
 

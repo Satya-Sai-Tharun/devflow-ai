@@ -6,7 +6,7 @@
 2. **Is that document current, or does it make claims that have not been verified?**
 3. **What else must change in the same commit set so the documents stay consistent?**
 
-**Baseline verified against:** commit `e82ba8f` on `dev`; the Milestone 1 API foundation is uncommitted on its feature branch. Consult Git status and diff for current changes.
+**Repository state:** M1 API foundation merged into `dev` by PR #2 at `f373ebc` (based on `e82ba8f`). Consult Git status and diff for current local changes.
 
 ---
 
@@ -73,7 +73,7 @@ Two very different kinds of claim live in these files, and confusing them is the
 | **Proposal** | `decisions/0002`–`0010` (except `0001`), and anything marked **Proposed** or **Unresolved decision** | **Not binding.** Do not cite as settled |
 | **Measured performance** | — | **None. Zero measurements exist** |
 | **Test results** | Local handoff reports 15 unit tests and one PostgreSQL migration integration test passing; Pyright, Ruff lint/format, documentation validation, and diff checks passed. Live PostgreSQL acceptance checks were also reported passing. These are local results, not CI results; see [`../.agent-state/ACTIVE-TASK.md`](../.agent-state/ACTIVE-TASK.md) for scope. |
-| **Implemented feature** | Initial API foundation exists uncommitted; product workflows remain unimplemented |
+| **Implemented feature** | Initial API foundation is merged into `dev`; product workflows remain unimplemented |
 
 **Rule:** before repeating any claim in a new document or a commit message, check which row it belongs to.
 Never promote a proposal to a decision, or a specification to an implementation, without evidence.

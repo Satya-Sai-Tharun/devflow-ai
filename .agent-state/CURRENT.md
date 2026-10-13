@@ -1,9 +1,9 @@
 # Current Project State
 
-**Last verified:** 2026-10-14, at `e82ba8f` (`dev` base) on `feature/m1-api-foundation`. Implementation changes are uncommitted and unpushed; the `dev` worktree remains unchanged.
+**Last verified:** 2026-10-14, after PR #2 merged into `dev` at `f373ebcccac6984cc0c957127d804ccd40b6980b` (based on `e82ba8f`).
 **Product direction:** Confirmed MVP direction (owner-approved).
-**Active milestone:** Milestone 1 developer foundation is in progress. The Python API foundation task is prepared for review; this does not complete Milestone 1.
-**Implementation status:** Initial FastAPI configuration, database lifecycle, health/readiness, baseline migration, Compose PostgreSQL, tests, and quality tooling are present as uncommitted changes. Authentication, workspace authorization, product domain, worker, frontend, and CI are not implemented.
+**Active milestone:** Milestone 1 developer foundation is in progress. M1-T1 API foundation is merged; CI remains outstanding.
+**Implementation status:** Initial FastAPI configuration, database lifecycle, health/readiness, baseline migration, Compose PostgreSQL, tests, and quality tooling are merged into `dev`. Authentication, workspace authorization, product domain, worker, frontend, and CI are not implemented.
 ### How the verification commit is checked
 
 `tools/validate-docs.ps1` verifies that the commit named below is a **real commit and an ancestor of current `HEAD`**. It deliberately does not require exact equality with `HEAD`: a document does not become false merely because a later commit exists, and an equality check would fail after every commit and train readers to ignore it. The check still fails if the recorded commit is unknown to the repository or has left `HEAD`'s history through a rewrite, reset, or rebase — both of which genuinely invalidate the verification.
@@ -14,15 +14,15 @@ When more than one commit has landed since the recorded commit, re-run `git rev-
 
 ## Verified repository facts
 
-Verified at base commit `e82ba8f`; implementation paths below are uncommitted on the feature branch.
+Verified against `dev` merge commit `f373ebc` (PR #2; feature commit `acdd0d6`).
 
 | Fact | Verified value |
 |---|---|
-| Branch | `feature/m1-api-foundation` based on `dev` |
-| Base commit | `e82ba8f` |
+| Branch | `dev` contains the M1 API foundation merge |
+| Merge commit | `f373ebc` (`feat: add API foundation`) |
 | Verification commit | `170a1c8` (ancestor of current HEAD; checked by the documentation validator) |
-| Working tree | Contains uncommitted Milestone 1 API foundation work; original `dev` worktree is clean |
-| Application source | `services/api/devflow_api/` Python API foundation; no frontend, workflow, auth, or domain implementation |
+| Implementation state | API foundation committed and merged; check local Git status separately |
+| Application source | Tracked `services/api/devflow_api/` Python API foundation; no frontend, workflow, auth, or domain implementation |
 | Dependency manifests | `pyproject.toml`, `uv.lock`, `.python-version` |
 | Tests | pytest unit tests and a PostgreSQL integration test under `tests/` |
 | Migrations | Explicit empty Alembic baseline at `services/api/migrations/versions/0001_initial.py` |
@@ -34,7 +34,7 @@ Verified at base commit `e82ba8f`; implementation paths below are uncommitted on
 
 Eight ADRs are **Accepted** (including owner-approved `0001`): `0001`–`0004`, `0007`, `0008`, `0010`, `0011`. `0005`, `0006`, and `0009` remain **Proposed** and are not binding. See `docs/decisions/README.md`.
 
-**Interpretation:** the repository has an initial uncommitted API foundation. Product requirements in `PRD.md` and `SPEC.md` remain planned unless specifically evidenced; no product workflow is implemented.
+**Interpretation:** the repository has an initial API foundation merged into `dev`. Product requirements in `PRD.md` and `SPEC.md` remain planned unless specifically evidenced; no product workflow is implemented.
 
 ---
 
@@ -77,8 +77,8 @@ Reconciled and committed in `e8a4d71`; reconciled further in the ADR-approval pa
 
 ## Next actions
 
-1. Complete review and human review of the uncommitted Milestone 1 API foundation.
-2. Continue Milestone 1 with remaining repository setup and CI work only after this feature is reviewed and integrated by its owner.
-3. Keep workspace membership roles unresolved; do not implement authorization until those semantics are decided.
+1. Add CI and wire in the documentation validator as the remaining Milestone 1 foundation work.
+2. Keep workspace membership roles unresolved; do not implement authorization until those semantics are decided.
+
 
 **Do not commit or push** without explicit owner authorization.
