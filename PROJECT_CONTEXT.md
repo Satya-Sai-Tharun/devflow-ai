@@ -101,7 +101,7 @@ git ls-files
 | `SPEC.md` | Task lifecycle and initial API contract (externally observable behavior) |
 | `ARCHITECTURE.md` | Components, boundaries, data flow, performance, reliability, security architecture |
 | `Design-system.md` | Visual tokens, shadcn/ui conventions, accessibility, motion |
-| `AGENTS.md` | Universal coding-agent rules and coordination protocol |
+| `AGENTS.md` | Universal coding-agent rules and single-agent development workflow |
 | `CLAUDE.md` | Claude Code-specific instructions (delegates to `AGENTS.md`) |
 | `GEMINI.md` | Gemini CLI-specific instructions (delegates to `AGENTS.md`) |
 | `CODE_STYLE.md` | Engineering conventions (Python, TypeScript, API, Git) |
@@ -174,7 +174,7 @@ Each subject has exactly one authoritative document. Summaries elsewhere must li
 | Performance budgets and benchmark protocol | `docs/PERFORMANCE.md` |
 | Visual tokens, components, accessibility, motion | `Design-system.md` |
 | Engineering conventions | `CODE_STYLE.md` |
-| Universal agent rules and coordination | `AGENTS.md` |
+| Universal agent rules and single-agent development workflow | `AGENTS.md` |
 | Milestone sequence and exit criteria | `PLAN.md` |
 | Requirement → component → test → evidence mapping | `docs/REQUIREMENTS_TRACEABILITY.md` |
 | Durable decision rationale | `docs/decisions/` |
@@ -355,8 +355,8 @@ Order of precedence:
 - Preserve user changes, existing instructions, and skills.
 - Make small, coherent, testable changes.
 - Do not perform broad rewrites or move files without a reason and explicit plan.
-- Use one writer agent per shared file/feature; parallel agents work on disjoint files or review only.
-- Agree on file ownership and API contracts before parallel implementation.
+- Use one coding agent at a time by default; Codex is primary unless the user selects another.
+- If parallel agents are explicitly authorized, use separate worktrees and branches, with one writer per shared file/feature and agreed ownership/contracts.
 - **Ask before changing** secrets/configuration, deployment, security boundaries, retention, or product scope.
 - Do not install large dependency sets without presenting the dependency list and rationale.
 - Do not commit, push, publish, or deploy unless explicitly authorized.

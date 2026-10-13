@@ -57,6 +57,10 @@ Rules for adapter files:
 MVP: Next.js App Router + shadcn/ui dashboard; Python FastAPI API; LangGraph worker; Python CLI using the same API; PostgreSQL for durable state; Redis only when justified. Task submission must remain independent of full agent execution.
 
 ## Working protocol
+- Use one coding agent at a time by default. Codex is the primary coding agent unless the user explicitly selects another.
+- Run multiple coding agents concurrently only with explicit user authorization.
+- No CAO or local development-time multi-agent coordinator is required. Do not install or implement orchestration infrastructure without explicit authorization.
+- Define task scope, handoffs, and validation results explicitly, whether work is done by one agent or several.
 - Inspect current files, tracked/untracked changes, and recent commits before editing.
 - Preserve user changes, repository-specific rules, existing skills, and agent configuration.
 - Prefer small, coherent, testable diffs over broad rewrites.
@@ -76,13 +80,12 @@ MVP: Next.js App Router + shadcn/ui dashboard; Python FastAPI API; LangGraph wor
 - Integrate reviewed feature branches into `dev` through pull requests. Promote `dev` to `main` only through an explicitly authorized, reviewed release.
 - Never force-push, rewrite shared history, or bypass required checks. Never commit, push, merge, publish, or deploy without explicit owner authorization.
 
-## Parallel agent isolation and communication
-- Each implementation agent must use a separate Git worktree and task-specific branch. Never run multiple implementation agents against the same writable working directory.
-- Assign one writer per feature and shared file. Establish file ownership and API contracts before parallel work. Reviewers may inspect concurrently but must not modify another agent's worktree.
-- Integrate agent work through a designated coordinator. Agents must not independently merge or push.
-- Before starting or modifying a shared interface, consult the shared coordination record. Every task must record its ID, objective, owner, branch, worktree, permitted files and file ownership, dependencies and API/schema contracts, status, questions, blockers, decisions, test evidence, handoff requirements, and next action.
-- Publish blockers and proposed decisions in the coordination record instead of silently guessing. Coordinate changes to shared contracts, dependencies, configuration, migrations, and agent rules explicitly. Security, architecture, dependency, and product-scope changes require owner approval where existing rules require it.
-- Do not assume independent CLI sessions can communicate automatically. Any actual messaging or coordinator implementation must be separately verified before it is described as available.
+## Agent isolation and handoffs
+- Use feature branches and separate Git worktrees when required by the branch rules below or to isolate concurrent tasks. If multiple coding agents are explicitly authorized, each implementation agent must use a separate worktree and task-specific branch; never let multiple agents write in the same worktree.
+- Assign one writer per feature and shared file. Establish file ownership, dependencies, and API/schema contracts before parallel implementation; reviewers may inspect concurrently but must not modify another agent's worktree.
+- Integrate reviewed feature branches through pull requests. Agents must not independently merge or push.
+- Keep task scope, blockers, decisions, validation evidence, and handoff details explicit in the task record or handoff. A shared coordination service is not required.
+- Do not assume independent CLI sessions can communicate automatically. Verify any actual messaging implementation before describing it as available.
 
 ## Engineering rules
 - Keep HTTP request handlers short; never await the full agent workflow during task submission.
