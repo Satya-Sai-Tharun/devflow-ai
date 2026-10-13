@@ -2,7 +2,7 @@
 
 **Status:** Agent runtime design specification. Workflow execution and agent orchestration are not implemented.
 
-> **Repository reality:** An initial FastAPI foundation exists under `services/api/`, configured for Python 3.12 and `uv`, with PostgreSQL, async SQLAlchemy, Alembic, and the empty `0001_initial` baseline. Automated tests exist, and local test, lint, type-check, documentation-validation, and PostgreSQL acceptance results have been reported passing; these are local results, not CI results. The API foundation does not implement the worker, LangGraph workflows, agent adapters, tool gateway, or execution behavior described here. No CI workflow is configured. Treat the runtime interfaces, fields, bounds, and diagrams below as design specifications, not working software.
+> **Repository reality:** An initial FastAPI foundation exists under `backend/`, configured for Python 3.12 and `uv`, with PostgreSQL, async SQLAlchemy, Alembic, and the empty `0001_initial` baseline. Automated tests exist, and local test, lint, type-check, documentation-validation, and PostgreSQL acceptance results have been reported passing; these are local results, not CI results. The API foundation does not implement the worker, LangGraph workflows, agent adapters, tool gateway, or execution behavior described here. No CI workflow is configured. Treat the runtime interfaces, fields, bounds, and diagrams below as design specifications, not working software.
 >
 > Numeric values and technology choices that the owner has not approved are explicitly marked **Proposed** or **Unresolved decision**. No performance benchmark is reported for this project.
 

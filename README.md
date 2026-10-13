@@ -14,7 +14,7 @@ DevFlow AI is a controlled agentic software-engineering platform for coordinatin
 The API should accept a task, persist task/dispatch intent, and return `202 Accepted` with a task ID. The background worker runs the longer agent workflow. Do not hold task-submission requests open while waiting for LLMs or tools.
 
 ## Current implementation status
-Milestone 1 Task 1 adds a minimal FastAPI service, PostgreSQL connectivity, an empty Alembic baseline, and automated checks. Authentication, workspace authorization, workflow execution, frontend, and CI remain unimplemented. No performance target has been measured. Verified repository facts are recorded in [`PROJECT_CONTEXT.md`](PROJECT_CONTEXT.md) § 2 and [`.agent-state/CURRENT.md`](.agent-state/CURRENT.md).
+The backend contains the initial FastAPI service, PostgreSQL connectivity, an empty Alembic baseline, and automated checks. Docker Compose starts PostgreSQL and the backend; the database migration remains an explicit step. The `frontend/` directory is reserved for the future Next.js application and has no application code or development server. Authentication, workspace authorization, workflow execution, and CI remain unimplemented. No performance target has been measured. Verified repository facts are recorded in [`PROJECT_CONTEXT.md`](PROJECT_CONTEXT.md) § 2 and [`.agent-state/CURRENT.md`](.agent-state/CURRENT.md).
 
 ## Source-of-truth documents
 Start with [`PROJECT_CONTEXT.md`](PROJECT_CONTEXT.md) — the master briefing, verified repository state, and navigation hub. [`docs/DOCUMENTATION_INDEX.md`](docs/DOCUMENTATION_INDEX.md) is authoritative for *which document governs which subject* and for the change-management protocol.
@@ -34,6 +34,7 @@ Security and quality:
 - [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md) — assets, trust boundaries, STRIDE and AI-specific threats, security requirements, test plan.
 - [`docs/TESTING.md`](docs/TESTING.md) — test strategy.
 - [`docs/PERFORMANCE.md`](docs/PERFORMANCE.md) — authoritative performance budgets and benchmark protocol.
+- [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) — future server deployment requirements; no production deployment is configured.
 - [`docs/REQUIREMENTS_TRACEABILITY.md`](docs/REQUIREMENTS_TRACEABILITY.md) — requirement → component → test → evidence mapping.
 
 Process and state:
@@ -46,15 +47,27 @@ Process and state:
 - [`.agent-state/CURRENT.md`](.agent-state/CURRENT.md) — verified current state.
 - [`.agent-state/ACTIVE-TASK.md`](.agent-state/ACTIVE-TASK.md) — active task and acceptance criteria.
 
-## Development
+## Local development
 
-Requirements: Windows PowerShell, Python 3.12 (managed by `uv`), and Docker Desktop for PostgreSQL integration checks. Copy `.env.example` to `.env`, replace its local placeholders, then run Compose.
+Docker Compose is the primary local startup interface. Install Docker Desktop, then create the local environment file once:
 
 ```powershell
 if (-not (Test-Path .env)) { Copy-Item .env.example .env }
+docker compose up --build -d
+docker compose ps
+docker compose run --rm backend alembic upgrade head
+docker compose logs -f backend
+# Run after exiting the log view, when you want to stop the services:
+docker compose down
+```
+
+`docker compose down` keeps the `devflow-postgres` volume. Do not add `-v` when stopping local services. PostgreSQL and the API are published on localhost only; the backend reaches PostgreSQL by the Compose service name `postgres`. Apply the migration before expecting `/readyz` to return `200`. `/healthz` checks process liveness, `/readyz` checks database connectivity and the current migration head, and `/docs` serves OpenAPI documentation.
+
+`start-dev.bat` can start Compose from File Explorer and creates `.env` from development-only placeholders when missing. It does not apply migrations; run the migration command above in PowerShell. To run backend checks without a container, use Python 3.12 and `uv` from `backend/`:
+
+```powershell
+Set-Location backend
 uv sync --locked
-docker compose up -d postgres
-uv run alembic upgrade head
 uv run pytest
 uv run ruff check .
 uv run ruff format --check .
@@ -62,9 +75,18 @@ uv run pyright
 uv run devflow-api
 ```
 
-The API listens on `127.0.0.1:8000`. `/healthz` checks process liveness; `/readyz` also requires PostgreSQL and the current migration head. Migrations are explicit and are not run at startup. The integration test requires a disposable `<POSTGRES_DB>_test` database; create it once with `docker compose exec postgres sh -c 'createdb -U "$POSTGRES_USER" "${POSTGRES_DB}_test"'`, then run `uv run pytest -m integration`.
+The PostgreSQL integration test only accepts a local, non-production database named with the `_test` suffix and refuses a non-empty database. It never drops or recreates databases. Run `uv run pytest -m integration` only after providing a dedicated disposable test database as `DEVFLOW_DATABASE_URL`.
 
 Run `powershell -File tools/validate-docs.ps1` after Markdown changes. It validates documentation consistency, not application behavior; see [`docs/DOCUMENTATION_INDEX.md`](docs/DOCUMENTATION_INDEX.md) § 7.
+
+## Repository layout
+
+- `backend/` — FastAPI package, Python project and lockfile, tests, Alembic config/migrations, and backend image.
+- `frontend/` — reserved for the future Next.js App Router and pnpm application; it is not scaffolded.
+- `docs/` — shared specifications, decisions, testing, security, and deployment guidance.
+- `compose.yaml` — root local development services; `.env.example` — root development placeholders.
+
+For future Linux/VPS deployment requirements and current limitations, see [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md). The current Compose setup is for local development and is not production-ready.
 ## Engineering priorities
 1. Reliable task domain and explicit lifecycle.
 2. Low-latency task API and shared API contract.

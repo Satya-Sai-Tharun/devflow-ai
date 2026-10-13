@@ -6,6 +6,8 @@
 - Run the relevant checks for every change and report exact commands/results.
 - Performance targets remain unverified until benchmark output is recorded with environment and load details.
 
+The Python project and test suite live in `backend/`. From that directory, install with `uv sync --locked`, run unit tests with `uv run pytest`, and run the isolated PostgreSQL integration test with `uv run pytest -m integration` only after setting `DEVFLOW_DATABASE_URL` to a dedicated local `_test` database. The integration test rejects non-local, production, wrong-suffix, and non-empty databases; it does not drop or recreate databases. Root Docker Compose commands and the explicit migration step are documented in [`../README.md`](../README.md).
+
 ## Unit tests
 - Task lifecycle: valid and invalid transitions, terminal states, blocked tasks, cancellation, approval, retry/attempt semantics.
 - Domain and policy: authorization decisions, tool allowlists, argument validation, timeout mapping, output limits.

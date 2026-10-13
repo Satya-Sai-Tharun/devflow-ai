@@ -1,6 +1,47 @@
 # Active Task
 
-**Task ID:** M1-PY-T1
+**Task ID:** REPO-STRUCT-001
+**Status:** Implementation and requested local verification complete; uncommitted on the feature branch, awaiting owner review/merge authorization.
+**Branch/base:** `feature/repository-structure-refactor` from `dev` at `e8ca84c1e8a64c2e355cb34fe97240bc1c039a41`.
+**Objective:** Move the existing API, migrations, tests, and Python project into `backend/`; add explicit-migration Docker Compose startup; reserve `frontend/`; and reconcile docs and agent state.
+**Scope exclusions:** Frontend implementation, authentication, workspace authorization, task/workflow domain, worker, LangGraph, Redis, production credentials/resources, deployment, and CI.
+**Design:** [`docs/superpowers/specs/2026-10-14-repository-structure-refactor-design.md`](../docs/superpowers/specs/2026-10-14-repository-structure-refactor-design.md).
+**Implementation plan:** [`docs/superpowers/plans/2026-10-14-repository-structure-refactor.md`](../docs/superpowers/plans/2026-10-14-repository-structure-refactor.md).
+
+## Decisions and safety constraints
+
+- Keep the root `compose.yaml`, `.env.example`, shared documentation, and tools; put Python project configuration and tests in `backend/`.
+- Preserve Alembic revision `0001_initial` and the integration test's local `_test`, production, and empty-database guards.
+- Keep migration execution explicit with a one-shot Compose command. API startup does not migrate.
+- Preserve the `devflow-postgres` volume and localhost-only PostgreSQL host binding. Never use `down -v`, reset databases, or operate on a production/non-test DSN.
+- Use service DNS `postgres` inside the backend container; bind API host exposure to localhost.
+- No ADR is needed: this implementation shape is explicitly approved in the owner request and does not change the accepted product/deployment security boundaries.
+- Ruling: Keep the integration test's `parents[2] / "alembic.ini"` path unchanged; after moving it under `backend/tests/integration/`, that resolves to `backend/alembic.ini`. An exploratory change to `parents[1]` failed the integration test and was reverted. Cost if wrong: the integration test would fail before migration.
+- No separate task/decision/blocker/handoff ledger exists in this checkout; this file and `.agent-state/CURRENT.md` are the coordination records.
+
+## Acceptance and verification
+
+- Preserve endpoint contracts and migration identifiers; backend package installs with `uv sync --locked` from `backend/`.
+- Ruff, Pyright, pytest, documentation validator, `git diff --check`, Compose config, Docker build/startup, explicit migration on a dedicated test database, and HTTP checks for `/healthz`, `/readyz`, `/docs`.
+- Final diff and searches must show no unintended stale paths, missing governance/migrations, secrets, generated artifacts, or database/volume deletion.
+- Report unavailable checks honestly. No commit, push, merge, or deployment.
+
+## Handoff
+
+- Relocated API, tests, Alembic, and Python project files into `backend/`; preserved revision `0001_initial` / `down_revision = None`.
+- `backend/`: `uv sync --locked` passed; `uv run --locked pytest -q -p no:cacheprovider` reported 15 passed; Ruff check/format passed; Pyright reported 0 errors/warnings/information. `uv run --locked alembic heads` reports `0001_initial (head)`.
+- Integration test on dedicated local PostgreSQL 17 database: `uv run --locked pytest -m integration -q -p no:cacheprovider` reported 1 passed. The existing `parents[2]` test config path correctly resolves after the move. Separate negative checks confirmed non-local URLs and non-empty `_test` databases are refused; the non-empty database remained without `alembic_version`.
+- `docker compose --env-file .env.example config --quiet` passed. Backend image build passed with the base image pinned by digest. An isolated project on localhost ports 55432/18000 reached healthy status; host checks returned `/healthz` 200, `/docs` 200, `/readyz` 503 before migration and 200 after explicit migration. Repeating `alembic upgrade head` succeeded.
+- The normal host port 5432 was already occupied by `devflow-ai-postgres-1` from another worktree. Verification therefore used a separate Compose project and ports. The pre-existing container and `devflow-ai_devflow-postgres` volume were not modified. The isolated test volume `devflow-refactor-test_devflow-postgres` was retained; only its containers and empty network were stopped/removed without `-v`.
+- The Windows launcher missing-Docker path was exercised and returned exit code 1 with a visible error and pause. The successful Compose startup path was verified directly, not by launching the batch file through File Explorer.
+- `powershell -File tools/validate-docs.ps1` passed: 40 documents, 320 links, 4 Mermaid diagrams. `git diff --check` passed. Remaining `services/api/` references are historical records or the new relocation plan/spec.
+- `graphify update .` could not update its stale local graph because the existing graph has 3,369 nodes and the new scan has 704; graphify refused to overwrite without `--force`. No force overwrite was performed.
+- No production deployment, security review, performance benchmark, frontend, worker, authentication, Redis, commit, push, or merge was performed.
+
+---
+
+## Previous task record (M1-PY-T1)
+
 **Status:** M1-T1 API foundation merged into `dev` by PR #2 at `f373ebc`. Milestone 1 remains in progress because CI is outstanding.
 **Objective:** Python 3.12 FastAPI service, typed configuration, async PostgreSQL access, explicit Alembic baseline, `/healthz` and `/readyz`, tests, and Windows developer setup.
 **Scope exclusions:** Authentication, workspace authorization, membership roles, task/workflow domain, worker, LangGraph, Redis, frontend, deployment, and CI.

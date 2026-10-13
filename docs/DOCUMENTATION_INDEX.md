@@ -6,7 +6,7 @@
 2. **Is that document current, or does it make claims that have not been verified?**
 3. **What else must change in the same commit set so the documents stay consistent?**
 
-**Repository state:** M1 API foundation merged into `dev` by PR #2 at `f373ebc` (based on `e82ba8f`). Consult Git status and diff for current local changes.
+**Repository state:** M1 API foundation merged into `dev` by PR #2 at `f373ebc` (based on `e82ba8f`). Its current location is `backend/`; consult Git status and diff for uncommitted repository refactors.
 
 ---
 
@@ -28,7 +28,8 @@ approval-outcome gap in `SPEC.md` stayed invisible (see [`decisions/0010`](decis
 | Navigation, orientation, verified repo state, conflict rules | [`../PROJECT_CONTEXT.md`](../PROJECT_CONTEXT.md) | Current | Summarizes and links only; owns nothing else |
 | Product scope, users, goals, non-goals, requirements `PR-001`…`PR-015`, acceptance criteria, success metrics | [`../PRD.md`](../PRD.md) | Current | Requirements unchanged by this audit |
 | Task states, allowed transitions, externally observable behavior, error-semantics baseline | [`../SPEC.md`](../SPEC.md) | Current — **one open gap** | § Known gap: rejected/expired approval has no transition |
-| System components, boundaries, data flow, performance/reliability/security architecture, delivery sequence | [`../ARCHITECTURE.md`](../ARCHITECTURE.md) | Current | Target layout; the API foundation now exists under `services/api/` |
+| System components, boundaries, data flow, performance/reliability/security architecture, delivery sequence | [`../ARCHITECTURE.md`](../ARCHITECTURE.md) | Current | Backend exists under `backend/`; frontend is reserved and not scaffolded |
+| Future deployment operations and current server-readiness limits | [`DEPLOYMENT.md`](DEPLOYMENT.md) | Planning guidance | No production deployment configuration or security review exists |
 | HTTP conventions, error envelope, endpoint shapes, SSE protocol, versioning, caching | [`API_CONTRACTS.md`](API_CONTRACTS.md) | Current | Extends `SPEC.md`; extensions are flagged |
 | Agent adapters, workflow stages, execution bounds, failure handling, idempotency | [`AGENT_RUNTIME.md`](AGENT_RUNTIME.md) | Current | § 9.4 cross-references the open approval decision |
 | Data model, migrations, indexing, retention, data ownership | [`DATABASE.md`](DATABASE.md) | Current | No product-domain schema exists; the empty baseline migration is implemented, and DDL sketches remain illustrative |
@@ -190,15 +191,16 @@ Limits worth knowing, so it is not over-trusted:
 
 ## 8. Known traps
 
-1. **`graphify-out/` is stale.** Built from commit `92b26715`, far behind `HEAD` (`e8a4d71`). Its ~3,369 nodes are
+1. **`graphify-out/` is stale.** Built from commit `92b26715`, far behind the current repository. Its ~3,369 nodes are
    dominated by third-party skill libraries under `.agents/`, `.claude/`, `.codex/`, `.opencode/`, and
-   there is **no first-party source code** to graph. `graphify-out/wiki/index.md`, referenced by
+   do not include the first-party API under `backend/`. `graphify-out/wiki/index.md`, referenced by
    `CLAUDE.md`, **does not exist**. Do not answer DevFlow AI architecture questions from the graph
    until it is regenerated against first-party sources.
 2. **The original v1.0 master briefing was inaccurate.** It listed files
-   (`docs/OPERATIONS.md`, `docs/DEPLOYMENT.md`, `.agent-state/` variants, and others) that do not
-   exist and never did. `PROJECT_CONTEXT.md` v1.1 replaces it and records the verified tree. Do not
-   re-introduce those references.
+   (`docs/OPERATIONS.md`, older `.agent-state/` variants, and others) that did not exist when it was
+   written. `docs/DEPLOYMENT.md` has since been added as planning guidance, not as the missing
+   production deployment specification. `PROJECT_CONTEXT.md` replaces the old briefing and records
+   the verified tree. Do not re-introduce the obsolete references.
 3. **A prior `.agent-state` snapshot described itself as unverified.** That self-doubt was correct at
    the time but is now resolved; the files are reconciled against a direct inspection.
 4. **`.agents/`, `.claude/`, `.codex/`, `.opencode/` are gitignored third-party skill libraries.**
@@ -213,6 +215,7 @@ Limits worth knowing, so it is not over-trusted:
 |---|---|
 | Orient myself | [`../PROJECT_CONTEXT.md`](../PROJECT_CONTEXT.md) |
 | Know if the repo is real yet | `../PROJECT_CONTEXT.md` § 2, [`../.agent-state/CURRENT.md`](../.agent-state/CURRENT.md) |
+| Run or assess a future server deployment | [`DEPLOYMENT.md`](DEPLOYMENT.md) (planning guidance; no production setup) |
 | Start work as an agent | [`../AGENTS.md`](../AGENTS.md), then the relevant subject doc |
 | Change the task lifecycle | [`../SPEC.md`](../SPEC.md), then § 5 above |
 | Add or change an endpoint | [`API_CONTRACTS.md`](API_CONTRACTS.md), [`../SPEC.md`](../SPEC.md) |

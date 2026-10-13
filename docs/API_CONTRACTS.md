@@ -2,7 +2,7 @@
 
 ## Status and scope
 
-**This document specifies the product API and transport conventions; most contracts below remain planned.** The initial API foundation exists under `services/api/`; `/healthz` and `/readyz` are implemented and have reported local verification. It does not implement the task, authentication, authorization, workflow, or SSE contracts below.
+**This document specifies the product API and transport conventions; most contracts below remain planned.** The initial API foundation exists under `backend/`; `/healthz` and `/readyz` are implemented. It does not implement the task, authentication, authorization, workflow, or SSE contracts below.
 
 The repository has a Python 3.12 FastAPI application, typed Pydantic Settings configuration, asynchronous SQLAlchemy PostgreSQL connectivity, and an explicit Alembic `0001_initial` baseline. `/healthz` is database-independent; `/readyz` checks database connectivity and migration state and returns a generic degraded 503 when readiness fails. Startup does not apply migrations. Local unit, PostgreSQL integration/acceptance, Pyright, Ruff, documentation-validator, and diff checks have been reported passing; these are local results, not CI results. See [`../.agent-state/ACTIVE-TASK.md`](../.agent-state/ACTIVE-TASK.md) and [`REQUIREMENTS_TRACEABILITY.md`](REQUIREMENTS_TRACEABILITY.md) for evidence scope.
 

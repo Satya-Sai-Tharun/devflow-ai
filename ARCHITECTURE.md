@@ -35,26 +35,16 @@ Reconcile this proposal with the actual tree before moving existing files. Do no
 
 ```text
 devflow-ai/
-├── apps/
-│   ├── web/                 # Next.js dashboard and shadcn/ui
-│   └── cli/                 # Python CLI; HTTP client for the API
-├── services/
-│   ├── api/                 # FastAPI application and API schemas
-│   └── worker/              # Background job runner and LangGraph entrypoint
-├── libs/
-│   └── core/                # Task domain, lifecycle, policy interfaces
-├── packages/
-│   └── shared-types/        # OpenAPI-generated or language-neutral contracts
-├── tests/
-│   ├── unit/
-│   ├── integration/
-│   └── performance/
-├── docs/
-├── .agent-state/
+├── backend/                 # FastAPI, Python project, tests, Alembic, Dockerfile
+├── frontend/                # Reserved for Next.js; not scaffolded
+├── docs/                    # Shared specifications and deployment guidance
+├── .agent-state/            # Verified status and active task handoff
+├── compose.yaml             # Local PostgreSQL and backend services
+├── .env.example             # Development-only configuration placeholders
 └── project source-of-truth documents
 ```
 
-This is the target layout. The initial Python API foundation now exists under `services/api/`; the other listed application components remain planned. Avoid creating empty abstractions without a concrete use. Python code should not be imported directly by the TypeScript application; generate TypeScript contracts from OpenAPI or maintain a language-neutral schema.
+`backend/` contains the implemented API foundation and its self-contained Python project. `frontend/` is only a reserved directory with a README; no frontend app or server exists. Compose and shared documentation remain at the repository root. Worker, task-domain, and shared-types directories remain future work. Avoid creating empty abstractions without a concrete use. Python code should not be imported directly by the TypeScript application; generate TypeScript contracts from OpenAPI or maintain a language-neutral schema.
 
 ## 4. Logical components
 
