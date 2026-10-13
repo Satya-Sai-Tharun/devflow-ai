@@ -63,6 +63,18 @@ $script:Failures = New-Object System.Collections.Generic.List[string]
 $script:LinkCount = 0
 $script:MermaidCount = 0
 
+# Windows PowerShell 5.1 decodes BOM-less files as ANSI, which silently corrupts
+# every non-ASCII character this documentation set uses (arrows, em dashes,
+# section signs). That breaks any check that matches such a character and hides
+# real content from the validator. All text reads therefore go through explicit
+# UTF-8 rather than Get-Content -Raw.
+$script:Utf8 = New-Object System.Text.UTF8Encoding($false)
+
+function Read-TextFile {
+    param([string]$Path)
+    return [System.IO.File]::ReadAllText($Path, $script:Utf8)
+}
+
 function Write-Head {
     param([string]$Text)
     Write-Host ''
@@ -129,7 +141,7 @@ foreach ($doc in $allMarkdown) {
     if (-not (Test-Path -LiteralPath $fullPath)) { continue }
 
     $docDir = Split-Path -Parent $doc
-    $content = Get-Content -LiteralPath $fullPath -Raw
+    $content = Read-TextFile -Path $fullPath
 
     foreach ($m in $LinkRegex.Matches($content)) {
         $target = $m.Groups[1].Value
@@ -301,7 +313,8 @@ foreach ($doc in $allMarkdown) {
     $fullPath = Join-Path $RepoRoot $doc
     if (-not (Test-Path -LiteralPath $fullPath)) { continue }
 
-    $lines = Get-Content -LiteralPath $fullPath
+    $lines = @(Read-TextFile -Path $fullPath -split "?
+")
     for ($i = 0; $i -lt $lines.Count; $i++) {
         $line = $lines[$i]
 
@@ -341,12 +354,12 @@ else {
 
     $validStatuses = @('Accepted', 'Proposed', 'Rejected', 'Superseded', 'Deprecated')
     $readmePath = Join-Path $decisionsDir 'README.md'
-    $readme = if (Test-Path -LiteralPath $readmePath) { Get-Content -LiteralPath $readmePath -Raw } else { '' }
+    $readme = if (Test-Path -LiteralPath $readmePath) { Read-TextFile -Path $readmePath } else { '' }
 
     $statusTally = @{}
     foreach ($adr in $adrFiles) {
         $rel = "docs/decisions/$($adr.Name)"
-        $text = Get-Content -LiteralPath $adr.FullName -Raw
+        $text = Read-TextFile -Path $adr.FullName
 
         $statusMatch = [regex]::Match($text, '(?im)^\s*[-*]?\s*\*\*Status:\*\*\s*([^\r\n]*)')
         if (-not $statusMatch.Success) {
@@ -420,7 +433,7 @@ if ($restatingDocs.Count -lt 2) {
 }
 else {
     foreach ($doc in $restatingDocs) {
-        $text = Get-Content -LiteralPath (Join-Path $RepoRoot $doc) -Raw
+        $text = Read-TextFile -Path (Join-Path $RepoRoot $doc)
         foreach ($state in $canonicalStates) {
             if ($text -notmatch "\b$([regex]::Escape($state))\b") {
                 Write-Fail 'lifecycle' "$doc does not mention canonical state '$state'"
@@ -429,23 +442,64 @@ else {
         Write-Pass "$doc references the canonical state set"
     }
 
-    # The unresolved approval gap must stay discoverable from the authoritative
-    # contract, and the ADR analysing it must exist.
-    $specText = Get-Content -LiteralPath (Join-Path $RepoRoot 'SPEC.md') -Raw
-    if ($specText -notmatch 'Known gap') {
-        Write-Fail 'lifecycle' 'SPEC.md no longer documents the approval-outcome "Known gap" (see docs/decisions/0010)'
-    }
-    else { Write-Pass 'SPEC.md documents the open approval-outcome gap' }
+    # The approval-outcome decision was formerly an open gap (rejected/expired
+    # approvals had no legal destination). The owner resolved it on 2026-10-13:
+    # needs_approval -> failed, with distinct terminal reasons. This check now
+    # guards the RESOLUTION rather than the gap, so a silent regression back to
+    # an ambiguous state fails the build.
+    $specText = Read-TextFile -Path (Join-Path $RepoRoot 'SPEC.md')
 
-    if (-not (Test-Path -LiteralPath (Join-Path $RepoRoot 'docs/decisions/0010-approval-outcome-transitions.md'))) {
+    # Acceptance may be expressed with an ASCII arrow ("->") or a Unicode
+    # rightwards arrow. The arrow is built from its code point so this script
+    # stays pure ASCII: Windows PowerShell 5.1 reads BOM-less files as ANSI and
+    # would corrupt a literal non-ASCII character.
+    #
+    # Markdown wraps each state in backticks, which collide with PowerShell's own
+    # escape character when embedded in a regex string. Stripping backticks from
+    # the text before matching removes that whole class of escaping bug and makes
+    # the check easy to read.
+    #
+    # Whitespace is matched with [^\S\r\n] rather than \s on purpose: \s matches
+    # newlines, which would let "needs_approval" at the end of one line and
+    # "failed" on a later line satisfy the check even when no transition exists.
+    # The transition must appear on a single line.
+    $arrow = [char]0x2192
+    $specPlain = $specText -replace '`', ''
+    $gap = "[^\S\r\n]*"
+    $needsApprovalToFailed = "needs_approval" + $gap + "(?:->|" + $arrow + ")" + $gap + "failed"
+
+    if ($specPlain -notmatch $needsApprovalToFailed) {
+        Write-Fail 'lifecycle' "SPEC.md no longer includes the 'needs_approval -> failed' transition, which was accepted on 2026-10-13 (docs/decisions/0010)"
+    }
+    else { Write-Pass "SPEC.md includes the accepted 'needs_approval -> failed' transition" }
+
+    foreach ($reason in @('approval_rejected', 'approval_expired')) {
+        if ($specText -notmatch [regex]::Escape($reason)) {
+            Write-Fail 'lifecycle' "SPEC.md does not define the accepted terminal reason '$reason' (docs/decisions/0010)"
+        }
+        else { Write-Pass "SPEC.md defines terminal reason '$reason'" }
+    }
+
+    if ($specText -match 'Known gap') {
+        Write-Fail 'lifecycle' 'SPEC.md still describes an open approval-outcome "Known gap", but it was resolved on 2026-10-13; the stale gap text must be removed'
+    }
+
+    $adr10 = Join-Path $RepoRoot 'docs/decisions/0010-approval-outcome-transitions.md'
+    if (-not (Test-Path -LiteralPath $adr10)) {
         Write-Fail 'lifecycle' 'docs/decisions/0010-approval-outcome-transitions.md is missing but referenced by SPEC.md'
     }
-    else { Write-Pass 'ADR 0010 (approval outcome transitions) present' }
+    else {
+        $adr10Text = Read-TextFile -Path $adr10
+        if ($adr10Text -notmatch '(?im)^\s*[-*]?\s*\*\*Status:\*\*\s*\*\*Accepted\*\*') {
+            Write-Fail 'lifecycle' 'ADR 0010 is not marked Accepted, but SPEC.md implements its accepted transition; the two must agree'
+        }
+        else { Write-Pass 'ADR 0010 is Accepted and consistent with SPEC.md' }
+    }
 
     # PERFORMANCE.md is authoritative for budgets; nothing else may claim to be.
     $perfPath = Join-Path $RepoRoot 'docs/PERFORMANCE.md'
     if (Test-Path -LiteralPath $perfPath) {
-        $perf = Get-Content -LiteralPath $perfPath -Raw
+        $perf = Read-TextFile -Path $perfPath
         if ($perf -match '(?i)authoritative') { Write-Pass 'docs/PERFORMANCE.md declares budget authority' }
     }
 }
@@ -465,16 +519,48 @@ else {
     $shortCommit = $headCommit.Substring(0, 7)
     Write-Info "HEAD = $shortCommit"
 
+    # .agent-state/CURRENT.md records the commit its facts were verified against.
+    #
+    # The correct test is ANCESTRY, not equality. A document does not become false
+    # merely because a later commit exists - that would make the check fail after
+    # every single commit and train the reader to ignore it. What genuinely
+    # invalidates a verification claim is the commit disappearing (unknown to the
+    # repository) or no longer being in HEAD's history (history rewritten, reset,
+    # or rebased). Both of those are real defects and still fail.
     $currentStatePath = Join-Path $RepoRoot '.agent-state/CURRENT.md'
     if (Test-Path -LiteralPath $currentStatePath) {
-        $cs = Get-Content -LiteralPath $currentStatePath -Raw
+        $cs = Read-TextFile -Path $currentStatePath
         $commitClaim = [regex]::Match($cs, '(?im)commit\s+`?([0-9a-f]{7,40})')
         if ($commitClaim.Success) {
             $claimed = $commitClaim.Groups[1].Value
-            if ($headCommit -notlike "$claimed*") {
-                Write-Fail 'staleness' ".agent-state/CURRENT.md claims verification at commit $claimed but HEAD is $shortCommit"
+
+            Push-Location -LiteralPath $RepoRoot
+            try {
+                $null = & git cat-file -e "$claimed^{commit}" 2>$null
+                $claimIsReal = ($LASTEXITCODE -eq 0)
+
+                $null = & git merge-base --is-ancestor $claimed HEAD 2>$null
+                $claimIsAncestor = ($LASTEXITCODE -eq 0)
+
+                $behind = 0
+                if ($claimIsAncestor -and ($headCommit -notlike "$claimed*")) {
+                    $behind = @(& git rev-list --count "$claimed..HEAD" 2>$null)[0]
+                }
             }
-            else { Write-Pass ".agent-state/CURRENT.md commit reference ($claimed) matches HEAD" }
+            finally { Pop-Location }
+
+            if (-not $claimIsReal) {
+                Write-Fail 'staleness' ".agent-state/CURRENT.md claims verification at commit $claimed, which does not exist in this repository"
+            }
+            elseif (-not $claimIsAncestor) {
+                Write-Fail 'staleness' ".agent-state/CURRENT.md claims verification at commit $claimed, which is NOT an ancestor of HEAD ($shortCommit) - history was rewritten, reset, or rebased since that verification"
+            }
+            elseif ($headCommit -like "$claimed*") {
+                Write-Pass ".agent-state/CURRENT.md verification commit ($claimed) is HEAD"
+            }
+            else {
+                Write-Pass ".agent-state/CURRENT.md verification commit ($claimed) is an ancestor of HEAD ($behind commit(s) since); facts may need re-verification if those commits changed the repository"
+            }
         }
         else {
             Write-Info '.agent-state/CURRENT.md does not pin a commit; freshness cannot be checked automatically'
@@ -497,7 +583,7 @@ else {
         foreach ($d in @('PROJECT_CONTEXT.md', 'README.md', '.agent-state/CURRENT.md', 'AGENTS.md')) {
             $p = Join-Path $RepoRoot $d
             if (-not (Test-Path -LiteralPath $p)) { continue }
-            $t = Get-Content -LiteralPath $p -Raw
+            $t = Read-TextFile -Path $p
             if ($t -match '(?i)documentation-only|documentation and specification only|no application code|no dependency manifest') {
                 $docsOnlyClaimants += $d
             }
@@ -520,7 +606,8 @@ $absPathHits = 0
 foreach ($doc in $allMarkdown) {
     $fullPath = Join-Path $RepoRoot $doc
     if (-not (Test-Path -LiteralPath $fullPath)) { continue }
-    $lines = Get-Content -LiteralPath $fullPath
+    $lines = @(Read-TextFile -Path $fullPath -split "?
+")
     for ($i = 0; $i -lt $lines.Count; $i++) {
         if ($lines[$i] -match '[A-Za-z]:\\Users\\|[A-Za-z]:\\Program Files\\') {
             Write-Fail 'portability' "$doc line $($i + 1) contains a machine-specific absolute path"
@@ -529,6 +616,55 @@ foreach ($doc in $allMarkdown) {
     }
 }
 if ($absPathHits -eq 0) { Write-Pass 'no machine-specific absolute paths in documentation' }
+
+# ================================================================ CHECK 8
+# Line endings must match .gitattributes (eol=lf).
+#
+# A file committed with CRLF while .gitattributes mandates LF produces a diff
+# on every touch, a normalisation churn on the next `git add`, and a permanent
+# warning from git. This check enforces the declared policy on the text file
+# types this repository owns. Files marked binary in .gitattributes are skipped,
+# and tools/validate-docs.ps1 itself is included deliberately so the policy
+# applies to the checker too.
+Write-Head 'Line endings (must match .gitattributes eol=lf)'
+
+$crlfChecked = 0
+$crlfOffenders = 0
+$textFilePattern = '\.(md|py|ts|tsx|js|jsx|json|ya?ml|toml|ps1|sh|css|scss|html|sql|txt|cfg|ini)$'
+$binaryPattern   = '\.(png|jpe?g|gif|ico|pdf|zip|woff2?|ttf|eot|so|dll|exe)$'
+
+# Every tracked or untracked-but-not-ignored project file, not only Markdown.
+$allProjectFiles = @()
+Push-Location -LiteralPath $RepoRoot
+try {
+    $allProjectFiles = @(& git ls-files -co --exclude-standard 2>$null |
+        Where-Object { $_ -notmatch $ExcludedPathPattern })
+}
+finally { Pop-Location }
+
+foreach ($rel in $allProjectFiles) {
+    if ($rel -notmatch $textFilePattern) { continue }
+    if ($rel -match $binaryPattern) { continue }
+
+    $full = Join-Path $RepoRoot $rel
+    if (-not (Test-Path -LiteralPath $full)) { continue }
+
+    $bytes = [System.IO.File]::ReadAllBytes($full)
+    $crlf = 0
+    for ($i = 1; $i -lt $bytes.Length; $i++) {
+        if ($bytes[$i] -eq 10 -and $bytes[$i - 1] -eq 13) { $crlf++ }
+    }
+    $crlfChecked++
+
+    if ($crlf -gt 0) {
+        Write-Fail 'line-endings' "$rel has $crlf CRLF line ending(s); .gitattributes declares 'eol=lf'"
+        $crlfOffenders++
+    }
+}
+if ($crlfChecked -gt 0) {
+    if ($crlfOffenders -eq 0) { Write-Pass "$crlfChecked text file(s) use LF line endings" }
+    else { Write-Info "$crlfOffenders of $crlfChecked text file(s) violate the LF policy" }
+}
 
 # ================================================================ summary
 

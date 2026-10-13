@@ -678,14 +678,18 @@ The worker must not hold a lease open indefinitely while waiting for a human. **
 4. The worker resumes the graph from the persisted checkpoint — via an explicit signal or via re-delivery, depending on the dispatch design.
 5. The resumed graph re-validates that the decision it is acting on is the persisted one, then continues or takes the rejection path.
 
-### 9.4 Approval timeout
+### 9.4 Approval outcomes and timeout
 
-- Each approval checkpoint has a decision deadline. **Proposed** default: a bounded waiting window after which the task no longer waits indefinitely.
-- On timeout, the **Proposed** outcome is transition to `blocked` with a clear reason, rather than treating silence as approval and rather than failing the task outright. Blocked is non-terminal and revisitable.
-- Treating an approval timeout as an implicit **approval** is explicitly forbidden. Silence is never consent.
-- Timeout policy (window length, blocked vs failed, notification behavior) is an **Unresolved decision** (§16).
+**Owner-approved 2026-10-13** ([`decisions/0010-approval-outcome-transitions.md`](decisions/0010-approval-outcome-transitions.md)). This section previously proposed `blocked` for timeout; that proposal was **not** accepted and is superseded below. It is retained in the ADR's alternatives for history.
 
-> **Cross-reference — read before implementing the reject/expire path.** `SPEC.md` § Known gap and [`decisions/0010-approval-outcome-transitions.md`](decisions/0010-approval-outcome-transitions.md) analyse this in full: the lifecycle table in `SPEC.md` does **not** permit `needs_approval → failed`, which is why a `blocked` outcome is proposed here while that ADR recommends adding `failed` with distinct `approval_rejected` and `approval_expired` reason codes. **This document's proposal is not authoritative**: the ADR records the options and the owner decides. Do not implement either path until the decision is recorded as **Accepted**, and when it is, update this section and `SPEC.md` in the same change set.
+- Each approval checkpoint has a decision deadline. **Accepted default: 24 hours**, configurable by task type.
+- **On rejection**, the task transitions `needs_approval → failed` with `terminal_reason = approval_rejected`.
+- **On expiry**, the task transitions `needs_approval → failed` with `terminal_reason = approval_expired`. Expiry is observable as its own outcome rather than hidden inside a generic failure.
+- Treating an approval timeout as an implicit **approval** is **forbidden**. Silence is never consent. A fall-through to `running` on timeout is a security defect, not a convenience.
+- **`blocked` remains reachable from `needs_approval`**, but only for a **non-approval** policy condition at the gate (for example a required capability or the sandbox being unavailable). It must never be used to represent a declined or expired decision: a decision *was* made (or the window closed), whereas `blocked` asserts that an external condition prevents progress and may later resolve.
+- **A rejection or expiry permanently refuses the gated action for that attempt.** The model cannot re-request the same action within the attempt and have it execute. Any further attempt is a **new attempt or a new task** with a new approval requirement — an approval is bound to a specific action scope, attempt, and state version, and is **single-use**, never inherited.
+
+**Distinguishing rule for implementers:** if the gate closed because a *human answered* or the *deadline passed*, the outcome is `failed` with the matching `terminal_reason`. If the gate could not even be presented or evaluated because of an environmental or policy condition, the outcome is `blocked`. When in doubt, `failed` is the safe default — it cannot accidentally authorize execution.
 
 ### 9.5 The approval invariant
 

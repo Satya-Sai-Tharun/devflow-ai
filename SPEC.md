@@ -47,23 +47,33 @@ States: `queued`, `running`, `needs_approval`, `completed`, `failed`, `cancelled
 Allowed transitions:
 - `queued` → `running`, `cancelled`, `blocked`
 - `running` → `needs_approval`, `completed`, `failed`, `cancelled`, `blocked`
-- `needs_approval` → `running`, `cancelled`, `blocked`
+- `needs_approval` → `running`, `failed`, `cancelled`, `blocked`
 - `blocked` → `queued`, `cancelled`
 - `completed`, `failed`, `cancelled` are terminal.
 
 Record actor, timestamp, from/to states, reason, and attempt where applicable. Retries must be explicit and idempotent; do not silently reopen terminal tasks.
 
-### Known gap: approval rejection and expiry have no transition
+### Approval outcomes and terminal reasons
 
-The table above cannot express two of the three approval outcomes required by PR-007 and specified in [`docs/API_CONTRACTS.md`](docs/API_CONTRACTS.md):
+**Approved by explicit owner decision on 2026-10-13** (see [`docs/decisions/0010-approval-outcome-transitions.md`](docs/decisions/0010-approval-outcome-transitions.md)). A task paused in `needs_approval` has these possible outcomes:
 
-| Approval outcome | Expressed by the table above? |
-|---|---|
-| Approved | Yes — `needs_approval` → `running` |
-| **Rejected** | **No.** `cancelled` conflates a declined action with a user cancellation; `blocked` implies a resolvable external dependency. |
-| **Expired** | **No.** `failed` is not reachable from `needs_approval`; silence is not consent, so returning to `running` is unacceptable. |
+| Outcome | Transition | `terminal_reason` | Notes |
+|---|---|---|---|
+| Human approves | `needs_approval` → `running` | — | Single-use; bound to the recorded action scope and state version |
+| Human rejects | `needs_approval` → `failed` | `approval_rejected` | The gated action is permanently refused for that attempt |
+| Decision window expires | `needs_approval` → `failed` | `approval_expired` | **Silence is never consent.** Expiry authorizes nothing |
+| Cancellation confirmed while paused | `needs_approval` → `cancelled` | `cancelled_by_request` | The pending approval is closed as superseded |
+| Non-approval policy condition at the gate | `needs_approval` → `blocked` | a policy code | **Not** an approval outcome. `blocked` is non-terminal and revisitable |
 
-**Status: unresolved — owner decision required.** The recommended resolution is recorded in [`docs/decisions/0010-approval-outcome-transitions.md`](docs/decisions/0010-approval-outcome-transitions.md): add `failed` as an allowed transition from `needs_approval`, with distinct machine-readable reason codes for rejection and expiry. Until the owner decides, the transition set above remains authoritative and the Milestone 2 transition function is blocked.
+Rules that cannot be relaxed:
+
+1. **A rejected or expired approval must never permit execution.** The gated action is permanently refused for that attempt; the model cannot re-request it and have it run.
+2. **Expiry and silence never authorize.** A fall-through to `running` on timeout is a security defect, not a convenience.
+3. **An approval is bound to a specific action scope, attempt, and state version.** It is single-use and is never inherited by a later attempt.
+4. **Only an authorized human decision resumes a paused task.** Model output, tool output, MCP output, retrieved content, and repository content can *request* an approval but can never grant, widen, or satisfy one.
+5. **`needs_approval` → `completed` is not permitted.** Work cannot complete by skipping the gate.
+
+`terminal_reason` is a required machine-readable code on every terminal transition; `reason` carries the human-readable detail. Default approval expiry is **24 hours, configurable by task type** (an owner-approved default; the concrete per-type values remain open).
 
 ## Error semantics
 Use consistent structured errors with a stable machine-readable code, human-readable message, request/correlation ID, and field details where appropriate. Do not leak stack traces, secrets, internal paths, or provider credentials.

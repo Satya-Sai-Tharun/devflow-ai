@@ -6,7 +6,7 @@
 2. **Is that document current, or does it make claims that have not been verified?**
 3. **What else must change in the same commit set so the documents stay consistent?**
 
-**Verified against:** commit `57af064` (`main`), clean working tree.
+**Verified against:** commit `e8a4d71` (`main`), plus the owner-decision reconciliation of 2026-10-13.
 
 ---
 
@@ -190,7 +190,7 @@ Limits worth knowing, so it is not over-trusted:
 
 ## 8. Known traps
 
-1. **`graphify-out/` is stale.** Built from commit `92b26715`; HEAD is `57af064`. Its ~3,369 nodes are
+1. **`graphify-out/` is stale.** Built from commit `92b26715`, far behind `HEAD` (`e8a4d71`). Its ~3,369 nodes are
    dominated by third-party skill libraries under `.agents/`, `.claude/`, `.codex/`, `.opencode/`, and
    there is **no first-party source code** to graph. `graphify-out/wiki/index.md`, referenced by
    `CLAUDE.md`, **does not exist**. Do not answer DevFlow AI architecture questions from the graph

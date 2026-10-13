@@ -53,14 +53,16 @@ All tables are **Proposed**. Primary-key strategy is an **Unresolved decision** 
 
 | Column | Type | Null | Constraints / notes |
 |---|---|---|---|
-| `id` | `uuid` | no | Primary key. **Unresolved decision:** UUIDv7 vs ULID vs `bigint` + public opaque ID |
-| `owner_id` | `uuid` | no | FK → `users.id` (Proposed). **Unresolved decision:** tenancy model |
-| `tenant_id` | `uuid` | yes | FK → `tenants.id` (Proposed); nullable only if single-tenant is chosen |
-| `title` | `text` | no | Bounded length (**Proposed**) |
+| `id` | `bigint` | no | Primary key, `GENERATED ALWAYS AS IDENTITY`. **Internal only — never exposed.** Owner-approved 2026-10-13 (`docs/decisions/0008`) |
+| `public_id` | `uuid` | no | **UUIDv7.** UNIQUE. The only identifier exposed in API responses, event payloads, and URLs. A test must assert `id` never appears in a response body |
+| `workspace_id` | `uuid` | no | FK → `workspaces.id`. **The isolation boundary** — owner-approved 2026-10-13 (`docs/decisions/0003`). Every query is scoped by it; a client never supplies it |
+| `owner_id` | `uuid` | no | FK → `users.id`. The user who submitted the task |
+| `title` | `text` | yes | Bounded length (**Proposed**). Optional; may be derived from the prompt |
 | `description` | `text` | yes | User-facing description, not the full agent payload |
 | `request_payload_ref` | `text` | yes | Reference to the stored request; **Unresolved decision:** inline `jsonb` vs object storage |
 | `request_digest` | `text` | yes | Digest of the normalized request; supports idempotent submission |
 | `state` | `text` | no | CHECK against the seven states in `SPEC.md` |
+| `terminal_reason` | `text` | yes | Machine-readable reason code. **Required (non-null) exactly when `state` is terminal.** See the code set below |
 | `state_changed_at` | `timestamptz` | no | When `state` last changed |
 | `created_at` | `timestamptz` | no | Default `now()` |
 | `updated_at` | `timestamptz` | no | Maintained by application or trigger |
@@ -71,6 +73,25 @@ All tables are **Proposed**. Primary-key strategy is an **Unresolved decision** 
 | `version` | `bigint` | no | Default `0`; optimistic-locking token, incremented on every write |
 | `cancel_requested_at` | `timestamptz` | yes | Cancellation **requested**, not confirmed |
 | `cancel_requested_by` | `uuid` | yes | FK → `users.id` |
+
+#### `terminal_reason` code set
+
+**Owner-approved 2026-10-13** (`docs/decisions/0010-approval-outcome-transitions.md`). Invariant: `state IN ('completed','failed','cancelled')` ⟺ `terminal_reason IS NOT NULL AND finished_at IS NOT NULL`.
+
+| Code | Terminal state | Meaning |
+|---|---|---|
+| `completed_verified` | `completed` | Verification passed |
+| `completed_partial` | `completed` | Verification passed partially, honestly recorded as such |
+| `approval_rejected` | `failed` | An authorized human declined the gated action |
+| `approval_expired` | `failed` | The decision window closed with no decision. **Permits no action** |
+| `verification_failed` | `failed` | Verification ran and did not pass, with no retry budget left |
+| `retries_exhausted` | `failed` | Bounded retries exhausted |
+| `budget_exhausted` | `failed` | Step, time, token, or cost ceiling reached |
+| `policy_denied` | `failed` | A tool or action was denied by policy and the task could not continue |
+| `internal_error` | `failed` | Unrecoverable internal failure |
+| `cancelled_by_request` | `cancelled` | Worker confirmed cancellation requested by an authorized principal |
+
+Enforce with a `CHECK` constraint over the allowed code set, and a paired constraint that a terminal `state` requires a non-null `terminal_reason`. Expiry and rejection use **distinct** codes so that timeout is observable as its own outcome rather than hidden inside a generic failure.
 | `is_terminal` | `boolean` | no | Default `false`; denormalized for fast non-terminal filtering |
 | `correlation_id` | `text` | yes | Request/trace correlation from the API layer |
 | `last_error_code` | `text` | yes | Stable machine-readable code; no stack traces or secrets |
@@ -266,12 +287,15 @@ These four are **Proposed** and must not be implemented before the corresponding
 
 ### 3.10 Entity relationship diagram
 
-Entity names are the exact table names above. The attribute lists on the seven core entities are **key columns only**; every column is specified in the tables above, and columns for the four **Proposed** entities appear in §3.8.
+Entity names are the exact table names above. The attribute lists on the core entities are **key columns only**; every column is specified in the tables above, and columns for the **Proposed** entities appear in §3.9.
+
+**Accepted tenancy change (2026-10-13):** `tenants` is replaced by **`workspaces`** as the isolation boundary, with an owning user. A workspace membership table and its roles are **required before workspace access control is implemented** and are documented as an open item in `docs/decisions/0003-auth-and-tenancy.md`; `workspace_members` is shown below as the anticipated shape.
 
 ```mermaid
 erDiagram
-    tenants ||--o{ users : "scopes"
-    tenants ||--o{ tasks : "owns"
+    workspaces ||--o{ workspace_members : "has"
+    users ||--o{ workspace_members : "belongs to"
+    workspaces ||--o{ tasks : "isolates"
     users ||--o{ tasks : "submits"
     users ||--o{ approvals : "requests"
     users ||--o{ approvals : "decides"
@@ -289,6 +313,21 @@ erDiagram
     task_steps ||--o{ tool_invocations : "records"
     tasks ||--o{ artifacts : "produces"
     task_steps ||--o{ artifacts : "produces"
+
+    workspaces {
+        uuid id PK
+        uuid public_id
+        uuid owner_id FK
+        text name
+        timestamptz created_at
+    }
+
+    workspace_members {
+        uuid workspace_id FK
+        uuid user_id FK
+        text role
+        timestamptz joined_at
+    }
 
     task_events {
         uuid id PK
@@ -308,10 +347,12 @@ erDiagram
     }
 
     tasks {
-        uuid id PK
+        bigint id PK
+        uuid public_id
+        uuid workspace_id FK
         uuid owner_id FK
-        uuid tenant_id FK
         text state
+        text terminal_reason
         timestamptz updated_at
         timestamptz started_at
         timestamptz finished_at
@@ -650,16 +691,18 @@ The recommended **Proposed** pattern:
 - Destructive migrations require a tested restore path (§10), not a down-migration.
 - Structural changes are made in an expand phase the previous application version tolerates, so "roll back the code, leave the schema" is viable without a down-migration.
 
-### 8.5 Migration tool — Unresolved decision
+### 8.5 Migration tool — **Accepted: Alembic**
 
-| Candidate | Strength | Cost / risk |
+**Owner-approved 2026-10-13** ([`decisions/0008`](decisions/0008-database-identity-and-migrations.md)). **Alembic**, with SQLAlchemy 2.x asynchronous models as the schema source ([`decisions/0011`](decisions/0011-data-access-layer.md)). Alternatives considered and not selected:
+
+| Candidate | Strength | Why not selected |
 |---|---|---|
-| Alembic (SQLAlchemy) | Standard for Python + FastAPI; autogenerate from models; ordered revisions; hand-written SQL allowed | Adds a SQLAlchemy dependency; autogenerated diffs must always be reviewed, never trusted |
+| **Alembic (chosen)** | Standard for Python + FastAPI; autogenerate from models; ordered revisions; hand-written SQL allowed | — Adds a SQLAlchemy dependency, which `0011` accepts; **autogenerated diffs must always be reviewed, never trusted** |
 | Plain versioned SQL files + a small runner | No ORM coupling; explicit SQL; easy review | Reimplements ordering, tracking, and drift detection; homegrown-tool risk |
-| Sqitch / Atlas and similar | Mature change-management semantics; drift detection | Extra toolchain and language dependency; familiarity cost |
-| Framework-bundled migration system | Fewer moving parts if that framework is chosen anyway | Couples migration safety to a larger decision |
+| Sqitch / Atlas and similar | Mature change-management semantics; drift detection | Extra toolchain and language dependency |
+| Framework-bundled migration system | Fewer moving parts | Couples migration safety to a larger decision |
 
-**Coupled unresolved decision:** ORM/driver choice (SQLAlchemy 2.x async + `asyncpg`, raw `asyncpg`, or another approach). **There is no ORM dependency in this repository today.** Both decisions belong in `docs/decisions/` as ADRs once made.
+**The coupled ORM/driver decision is now owned** by [`decisions/0011`](decisions/0011-data-access-layer.md): SQLAlchemy 2.x asynchronous with `asyncpg`. There is no ORM dependency in this repository yet — `pyproject.toml` and `uv.lock` are **Milestone 1** deliverables (plan item T2) and are not created by documentation work.
 
 ## 9. Retention, deletion and privacy
 
@@ -797,24 +840,24 @@ No latency target is met until it is **measured**; [`PERFORMANCE.md`](PERFORMANC
 
 ## 12. Open decisions requiring the owner
 
-None may be resolved implicitly in code, and none is resolved by this document.
+None may be resolved implicitly in code, and none is resolved by this document. **Decisions 1–4 and 7 were accepted on 2026-10-13** and are recorded here for traceability; the rest remain open.
 
-| # | Decision | Options | Consequence of deferral |
+| # | Decision | Status | Resolution or consequence of deferral |
 |---|---|---|---|
-| 1 | **ORM / database driver** | SQLAlchemy 2.x async + `asyncpg`; raw `asyncpg`; another driver or ORM | Determines migration tooling, typing strategy, and how easily N+1 is avoided. No ORM dependency exists today. Discussed in [`decisions/0008`](decisions/0008-database-identity-and-migrations.md) (**Proposed**) |
-| 2 | **Migration tool** | Alembic; versioned SQL + runner; Sqitch/Atlas; framework-bundled | Blocks the first migration and the expand/contract workflow (§8). Discussed in [`decisions/0008`](decisions/0008-database-identity-and-migrations.md) (**Proposed**) |
-| 3 | **Tenancy model** | Single-tenant; tenant column enforced in application code; tenant column with PostgreSQL row-level security | Determines whether `tenant_id` is required, whether unique indexes need a tenant prefix, and whether RLS policies are schema. Discussed in [`decisions/0003`](decisions/0003-auth-and-tenancy.md) (**Proposed**) |
-| 4 | **Row-level security** | Used or not, and for which roles | If used, every table needs policies and every connection needs correct tenant context; misconfiguration can leak across tenants. Discussed in [`decisions/0003`](decisions/0003-auth-and-tenancy.md) (**Proposed**) |
-| 5 | **Retention windows** | The §9.2 values, or owner-specified | `SECURITY.md` requires retention before production; otherwise data accumulates indefinitely and erasure requests cannot be satisfied defensibly. Discussed in [`decisions/0006`](decisions/0006-data-retention-and-privacy.md) (**Proposed**) |
-| 6 | **Audit append-only, with or without legal hold** | Strict append-only with tombstoning; append-only with a legal-hold exemption; identity separated into its own table | Determines whether erasure requests can be satisfied at all; a compliance question, not an engineering preference. Discussed in [`decisions/0006`](decisions/0006-data-retention-and-privacy.md) (**Proposed**) |
-| 7 | **Primary-key strategy** | UUIDv7; ULID; `bigint` surrogate + public opaque identifier | Affects index locality and write throughput (random keys fragment B-trees) and whether internal identifiers reach clients. [`decisions/0008`](decisions/0008-database-identity-and-migrations.md) recommends a split storage key + public `public_id` (**Proposed**) |
-| 8 | **Request/result payload storage** | Inline `jsonb`; object storage by reference; hybrid by size threshold | Affects backup size, restore time, deletion completeness (§9.3 step 5), and retention scope |
-| 9 | **Redis usage** | Which ephemeral concerns use Redis at all | Anything in Redis must stay reconstructible from PostgreSQL (§2.2) |
-| 10 | **Checkpoint storage** | LangGraph checkpoints in PostgreSQL; a dedicated store | Affects pruning (§9.5), backup scope, and restore behavior |
-| 11 | **Read replica for reporting** | Provisioned or not | Determines whether long analytical queries can be isolated from the task API |
-| 12 | **Backup RPO/RTO and drill cadence** | The §10 values, or owner-specified | An untested restore is not a recovery plan; RTO cannot be claimed without a drill |
+| 1 | **ORM / database driver** | **ACCEPTED 2026-10-13** | **SQLAlchemy 2.x asynchronous with `asyncpg`.** Session and transaction conventions are owned by [`decisions/0011`](decisions/0011-data-access-layer.md). See §11.2 for the no-lazy-loading rule |
+| 2 | **Migration tool** | **ACCEPTED 2026-10-13** | **Alembic**, with autogenerated revisions always reviewed. See §8 and [`decisions/0008`](decisions/0008-database-identity-and-migrations.md) |
+| 3 | **Tenancy model** | **ACCEPTED 2026-10-13** | **A workspace is the isolation boundary, with an owning user.** `tasks.workspace_id` is non-null and every query is scoped by it; a client never supplies it. See [`decisions/0003`](decisions/0003-auth-and-tenancy.md). **Membership roles remain to be documented** before workspace access control is implemented |
+| 4 | **Row-level security** | **Open** | Whether RLS is adopted in addition to application-level scoping. If used, every table needs policies and every pooled connection needs correct workspace context — a misconfiguration leaks across workspaces. Not required for the MVP; application-level scoping is the accepted mechanism |
+| 5 | **Retention windows** | **Open** — [`decisions/0006`](decisions/0006-data-retention-and-privacy.md) Proposed | `SECURITY.md` requires retention before production; otherwise data accumulates indefinitely and erasure requests cannot be satisfied defensibly |
+| 6 | **Audit append-only, with or without legal hold** | **Open** — [`decisions/0006`](decisions/0006-data-retention-and-privacy.md) Proposed | Determines whether erasure requests can be satisfied at all; a compliance question, not an engineering preference |
+| 7 | **Primary-key strategy** | **ACCEPTED 2026-10-13** | **Internal `bigint` identity primary key plus a separate public UUIDv7 `public_id`.** The internal key is never exposed. See §3.1 and [`decisions/0008`](decisions/0008-database-identity-and-migrations.md) |
+| 8 | **Request/result payload storage** | **Open** | Inline `jsonb` vs object storage by reference vs hybrid by size threshold. Affects backup size, restore time, deletion completeness (§9.3), and retention scope |
+| 9 | **Redis usage** | **DEFERRED 2026-10-13** | **Redis is not required for correctness** and is not used in the first implementation. Anything later placed in Redis must stay reconstructible from PostgreSQL (§2.2). See [`decisions/0002`](decisions/0002-durable-job-dispatch.md) |
+| 10 | **Checkpoint storage** | **Open** | LangGraph checkpoints in PostgreSQL vs a dedicated store. Affects pruning (§9.5), backup scope, and restore behavior |
+| 11 | **Read replica for reporting** | **Open** | Determines whether long analytical queries can be isolated from the task API |
+| 12 | **Backup RPO/RTO and drill cadence** | **Open** | The §10 values, or owner-specified. An untested restore is not a recovery plan |
 
-Each decision, once made, should be recorded as an ADR in `docs/decisions/` and the affected sections of this document updated in the same change set. Proposed records already exist for several of these; **none is Accepted, so none is cited here as settled**. See [`decisions/README.md`](decisions/README.md) for the status vocabulary and the current index.
+Each remaining decision, once made, should be recorded as an ADR in `docs/decisions/` and the affected sections of this document updated in the same change set. See [`decisions/README.md`](decisions/README.md) for the status vocabulary and the current index: **`0002`, `0003`, `0004`, `0007`, `0008`, `0010`, `0011` are Accepted; `0005`, `0006`, `0009` remain Proposed and are not cited here as settled.**
 
 ## 13. Related documents
 

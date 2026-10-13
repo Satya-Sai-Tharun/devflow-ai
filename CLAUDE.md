@@ -8,9 +8,9 @@ coordination protocol. Inspect relevant project files before making changes.
 
 This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
 
-**Read this before relying on the graph.** As verified at commit `57af064`, `graphify-out/` is **stale and misleading for this repository**:
+**Read this before relying on the graph.** As verified at commit `e8a4d71`, `graphify-out/` is **stale and misleading for this repository**:
 
-- It was built from commit `92b26715`; HEAD has since moved.
+- It was built from commit `92b26715`, which is far behind `HEAD`.
 - Its ~3,369 nodes are dominated by the third-party skill libraries under `.agents/`, `.claude/`, `.codex/`, and `.opencode/` (which are gitignored and are not project sources).
 - There is currently **no first-party application code** to graph, because this repository is documentation-only.
 - `graphify-out/wiki/index.md` **does not exist**, despite being referenced below.

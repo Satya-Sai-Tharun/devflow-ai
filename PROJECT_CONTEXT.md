@@ -1,13 +1,15 @@
 # DevFlow AI — Master Project Context
 
-**Version:** 1.1
-**Status:** Repository-reconciled. Supersedes the v1.0 briefing, which assumed files that do not exist in this checkout.
-**Last reconciled:** against commit `57af064` (`main`), clean working tree.
+**Version:** 1.2
+**Status:** Repository-reconciled, with owner decisions recorded. Supersedes v1.1 and the v1.0 briefing, which assumed files that do not exist in this checkout.
+**Last reconciled:** against commit `e8a4d71` (`main`), with the owner decisions of 2026-10-13 applied.
 **Purpose:** A single portable briefing and navigation hub for any coding agent or human developer working on DevFlow AI.
 
 > **Read order for agents:** this file, then `AGENTS.md`, then the subject documents listed in [§4 Source of truth](#4-source-of-truth-model).
 > This file is an **index and orientation document**. It summarizes and links; it does not replace the detailed specifications.
 > If documents conflict, follow the [conflict-resolution order](#9-conflict-resolution) instead of guessing.
+>
+> **Decision status (2026-10-13):** ADRs `0001`, `0002`, `0003`, `0004`, `0007`, `0008`, `0010`, and `0011` are **Accepted** and binding. ADRs `0005`, `0006`, and `0009` remain **Proposed** and are **not** binding. See [`docs/decisions/README.md`](docs/decisions/README.md).
 
 ---
 
@@ -35,23 +37,24 @@ The problem it addresses is not simply "how to generate code." Developers using 
 
 ## 2. Verified repository state
 
-**Verified facts as of commit `57af064`.** This section is the antidote to stale assumptions; re-verify with the commands shown before trusting it.
+**Verified facts as of commit `e8a4d71`.** This section is the antidote to stale assumptions; re-verify with the commands shown before trusting it.
 
 | Fact | Verified value |
 |---|---|
 | Branch | `main` |
-| HEAD | `57af064` |
-| Working tree at `57af064` | Clean, no untracked files — **as first inspected, before this documentation audit** |
-| Working tree now | **Dirty by design:** this audit's documentation changes are uncommitted (new `PROJECT_CONTEXT.md`, `GEMINI.md`, `tools/`, six new `docs/*.md`, `docs/decisions/`; nine modified docs). Nothing is committed or pushed. Always re-run `git status --short` rather than trusting a row here |
-| Tracked files | 18 (all Markdown, plus `LICENSE`, `.gitignore`, `.gitattributes`) |
+| HEAD | `e8a4d71`, in sync with `origin/main` (pushed) |
+| Working tree | **Clean** at that commit; the 2026-10-13 owner-decision reconciliation is applied on top and **uncommitted** |
+| Tracked files | 38 (documentation, plus `LICENSE`, `.gitignore`, `.gitattributes`, `tools/validate-docs.ps1`) |
 | Application source code | **None.** No Python, no TypeScript, no app entry points |
 | Dependency manifests / lockfiles | **None.** No `pyproject.toml`, `package.json` (project-owned), lockfiles |
 | Test suites / test config | **None** |
 | CI/CD workflows | **None.** `.github/` contains only `copilot-instructions.md` |
-| Docker / deployment files | **None** |
+| Docker / deployment files | **None** (`compose.yaml` is a Milestone 1 deliverable) |
 | Type of repository | **Documentation and specification only**, plus documentation tooling |
 | Executable scripts | **One:** `tools/validate-docs.ps1`, a documentation validator — not application code |
-| Gitignored tooling | `.agents/`, `.claude/`, `.codex/`, `.opencode/` (installed skill libraries), `graphify-out/` |
+| Gitignored tooling | `.agents/`, `.claude/`, `.codex/`, `.opencode/` (installed skill libraries), `graphify-out/`, `.gemini/`, `.antigravity/` |
+
+**Ignored agent directories are anticipatory, not present.** `.gemini/` and `.antigravity/` are listed in `.gitignore` (lines 60–61) but **do not exist** in this checkout. Both rules are on the machine-local tooling list for consistency with the other agent directories; if either is created and holds project-owned instructions, it must be added to the cross-agent matrix in `AGENTS.md` and evaluated on its merits rather than remaining ignored by default.
 
 Re-verify with:
 
@@ -60,6 +63,27 @@ git rev-parse HEAD
 git status --short
 git ls-files
 ```
+
+### Environment configuration
+
+**`.env.example` does not exist yet.** It is a **Milestone 1 deliverable** (plan item T2) and is intentionally not created by documentation work. `.gitignore` already excludes `.env` and permits `!.env.example` — verified.
+
+**Prefix convention:** application configuration uses `DEVFLOW_`. Genuinely conventional infrastructure keeps its ecosystem-standard names (`POSTGRES_*`) rather than being forced into the prefix.
+
+**Required variable surface** (names fixed now so scripts, tests, and CI do not invent divergent ones):
+
+| Group | Variables | Notes |
+|---|---|---|
+| Environment | `DEVFLOW_ENV`, `DEVFLOW_LOG_LEVEL`, `DEVFLOW_LOG_FORMAT` | `local` \| `ci` \| `production`; JSON logs in deployed environments |
+| API | `DEVFLOW_API_HOST`, `DEVFLOW_API_PORT`, `DEVFLOW_CORS_ORIGINS`, `DEVFLOW_REQUEST_ID_HEADER` | |
+| Database | `DEVFLOW_DATABASE_URL`, `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` | `DEVFLOW_DATABASE_URL` is the composed DSN the app reads (`postgresql+asyncpg://…`) |
+| Redis | `DEVFLOW_REDIS_URL` | **Optional and empty by default.** Redis must never be required for correctness (ADR 0002) |
+| Auth | `DEVFLOW_SESSION_SECRET`, `DEVFLOW_SESSION_TTL_SECONDS`, `DEVFLOW_SESSION_IDLE_TTL_SECONDS`, `DEVFLOW_PASSWORD_HASH`, `DEVFLOW_CSRF_ENABLED` | `DEVFLOW_PASSWORD_HASH=argon2id`; the secret is generated locally, never committed |
+| Approvals | `DEVFLOW_APPROVAL_TTL_SECONDS` | Default 86400 (24 h), per ADR 0010 |
+| Adapters | `DEVFLOW_AGENT_ADAPTER`, `DEVFLOW_ADAPTER_DEFAULT_ID`, `DEVFLOW_MOCK_SEED`, `DEVFLOW_MOCK_SCENARIO`, `DEVFLOW_LOCAL_ENDPOINT`, `DEVFLOW_LOCAL_MODEL_TAG`, `DEVFLOW_HOSTED_ENABLED`, `DEVFLOW_HOSTED_CREDENTIAL_REF`, `DEVFLOW_MAX_OUTPUT_TOKENS`, `DEVFLOW_REQUEST_TIMEOUT_SECONDS` | **`DEVFLOW_AGENT_ADAPTER=mock`** and **`DEVFLOW_HOSTED_ENABLED=false`** are the defaults; `DEVFLOW_HOSTED_CREDENTIAL_REF` holds a secret-manager **reference**, never an inline key |
+| Limits | `DEVFLOW_TASK_WALL_CLOCK_SECONDS`, `DEVFLOW_MAX_STEPS_PER_TASK`, `DEVFLOW_MAX_TOOL_CALLS_PER_TASK`, `DEVFLOW_MAX_CONCURRENT_JOBS`, `DEVFLOW_MAX_CONCURRENT_MODEL_CALLS`, `DEVFLOW_TASK_COST_CAP_USD` | Values are **Proposed** defaults pending ADRs 0005/0009 |
+
+**Rules:** placeholders only in `.env.example` — never a real value; production secrets come from a secret manager, not a file; secrets are never logged (`SR-15`); and no agent may invent a variable name outside this table without updating it in the same change set.
 
 ### Consequences you must not ignore
 - **Every capability in `PRD.md`, `SPEC.md`, and `ARCHITECTURE.md` is planned, not implemented.** No task lifecycle, API, worker, dashboard, or CLI exists yet.
@@ -186,16 +210,16 @@ A user submits: "Add password reset to this repository and test it."
 - `cancelled`: cancellation has been acknowledged.
 - `blocked`: a dependency or policy condition prevents progress.
 
-Initial allowed transitions:
+Allowed transitions (**owner-approved 2026-10-13**):
 - `queued` → `running`, `cancelled`, `blocked`
 - `running` → `needs_approval`, `completed`, `failed`, `cancelled`, `blocked`
-- `needs_approval` → `running`, `cancelled`, `blocked`
+- `needs_approval` → `running`, `failed`, `cancelled`, `blocked`
 - `blocked` → `queued`, `cancelled`
-- `completed`, `failed`, and `cancelled` are terminal.
+- `completed`, `failed`, and `cancelled` are terminal (never reopened).
 
 Centralize lifecycle validation in domain logic, not only in UI code. Record actor, timestamp, from/to state, reason, and attempt where applicable. Retries must be explicit; never silently reopen a terminal task.
 
-> **Known gap (unresolved):** a rejected or expired approval has no defined destination, because `failed` is unreachable from `needs_approval`. See `SPEC.md` § Known gap and [`docs/decisions/0010-approval-outcome-transitions.md`](docs/decisions/0010-approval-outcome-transitions.md). This blocks the Milestone 2 transition function until the owner decides.
+**Approval outcomes.** A task in `needs_approval` reaches `failed` with a machine-readable `terminal_reason`: `approval_rejected` when a human declines, `approval_expired` when the decision window closes (default 24 hours, configurable by task type). A rejected or expired approval **never permits execution** — the gated action is permanently refused for that attempt. **Silence is never consent.** `needs_approval → blocked` is reserved for a non-approval policy condition at the gate; `needs_approval → completed` is forbidden. See `SPEC.md` § Approval outcomes and [`docs/decisions/0010-approval-outcome-transitions.md`](docs/decisions/0010-approval-outcome-transitions.md).
 
 ### Initial API contract (summary only)
 - `POST /api/v1/tasks` — validates, persists task and dispatch intent, returns `202 Accepted` with `task_id`, status URL, and events URL.
@@ -299,7 +323,7 @@ Authoritative detail: `docs/TESTING.md`, `docs/REQUIREMENTS_TRACEABILITY.md`.
 
 ## 8. Known caveats and traps
 
-1. **`graphify-out/` is stale and noisy.** The graph was built from commit `92b26715`; HEAD is `57af064`. Its 3,369 nodes are dominated by third-party skill libraries under `.agents/`, `.claude/`, `.codex/`, and `.opencode/`, with essentially no first-party application code (there is none). `graphify-out/wiki/index.md` referenced by `CLAUDE.md` **does not exist**. Do not rely on the graph for DevFlow AI architecture questions until it is regenerated against first-party sources.
+1. **`graphify-out/` is stale and noisy.** The graph was built from commit `92b26715`, which is far behind `HEAD` (`e8a4d71`). Its 3,369 nodes are dominated by third-party skill libraries under `.agents/`, `.claude/`, `.codex/`, and `.opencode/`, with essentially no first-party application code (there is none). `graphify-out/wiki/index.md` referenced by `CLAUDE.md` **does not exist**. Do not rely on the graph for DevFlow AI architecture questions until it is regenerated against first-party sources.
 2. **The v1.0 briefing was inaccurate.** It listed files that do not exist in this checkout. Do not re-introduce them as if present.
 3. **`docs/PERFORMANCE.md`, `PRD.md`, `ARCHITECTURE.md`, and `docs/TESTING.md` all restate the same budgets.** `docs/PERFORMANCE.md` is authoritative; the others should link to it rather than diverge.
 4. **No CI exists.** Any "quality gate" language describes intent, not enforcement.

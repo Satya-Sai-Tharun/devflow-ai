@@ -1,10 +1,12 @@
 # 0010. Approval outcome transitions (spec gap)
 
-- **Status:** **Proposed** — requires owner decision; identified during the documentation audit
-- **Date:** 2026-10-12
-- **Deciders:** project owner (decision required); agent analysis
+- **Status:** **Accepted** — approved by the project owner on 2026-10-13
+- **Date:** 2026-10-12 (proposed); 2026-10-13 (accepted)
+- **Deciders:** project owner
 - **Related requirements:** PR-007, PR-008, PR-003
-- **Related documents:** `SPEC.md` § Task lifecycle, `docs/API_CONTRACTS.md` § 6, `docs/AGENT_RUNTIME.md`, `PRD.md`
+- **Related documents:** `SPEC.md` § Approval outcomes, `docs/API_CONTRACTS.md` § 6, `docs/AGENT_RUNTIME.md`, `PRD.md`
+
+> **Owner decision (2026-10-13):** Rejected approvals transition `needs_approval → failed` with `terminal_reason=approval_rejected`. Expired approvals transition `needs_approval → failed` with `terminal_reason=approval_expired`. **Proposed default expiry is 24 hours, configurable by task type.** **Expiry and silence must never authorize execution.** The complete accepted transition table is recorded below and in `SPEC.md`.
 
 ## Context
 
@@ -47,15 +49,37 @@ Extend the lifecycle table, rather than overloading existing states.
 2. **Expired approval → the task transitions to `failed`**, with a distinct terminal reason
    (approval timeout), so expiry is observable as its own outcome rather than hidden inside a generic
    failure. Retrying is a new attempt or a new task, per the existing retry rule.
-3. **`needs_approval` gains `failed` as an allowed transition.** The resulting updated table:
+3. **`needs_approval` gains `failed` as an allowed transition.** The resulting **accepted** table:
 
 ```text
 queued          -> running | cancelled | blocked
 running         -> needs_approval | completed | failed | cancelled | blocked
 needs_approval  -> running | failed | cancelled | blocked
 blocked         -> queued | cancelled
-terminal: completed, failed, cancelled
+terminal:         completed | failed | cancelled      (never reopened)
 ```
+
+**Complete accepted transition trigger table** — this is the authoritative form, mirrored in `SPEC.md` § Approval outcomes:
+
+| From | To | Trigger | `terminal_reason` |
+|---|---|---|---|
+| `running` | `needs_approval` | Graph reaches a policy-marked gate | — |
+| `needs_approval` | `running` | Authorized human approves | — |
+| `needs_approval` | `failed` | Authorized human rejects | `approval_rejected` |
+| `needs_approval` | `failed` | Decision window expires (default 24 h, per-type configurable) | `approval_expired` |
+| `needs_approval` | `cancelled` | Authorized cancellation, worker-confirmed | `cancelled_by_request` |
+| `needs_approval` | `blocked` | Non-approval policy condition at the gate | policy code |
+| `queued` | `running` | Worker claims the job | — |
+| `queued` | `cancelled` | Cancellation confirmed before a claim | `cancelled_by_request` |
+| `queued` | `blocked` | Required dependency or policy condition unavailable | policy code |
+| `running` | `completed` | Verification passed | `completed_verified` |
+| `running` | `failed` | Unrecoverable error, retries exhausted | error class |
+| `running` | `cancelled` | Cancellation confirmed by the worker | `cancelled_by_request` |
+| `running` | `blocked` | Required capability or policy condition unavailable | policy code |
+| `blocked` | `queued` | The blocking condition was resolved | — |
+| `blocked` | `cancelled` | Cancellation confirmed while blocked | `cancelled_by_request` |
+
+**Forbidden:** `needs_approval → completed`; `needs_approval → running` without a recorded authorized decision; any transition out of `completed`, `failed`, or `cancelled`; expiry treated as approval.
 
 4. **A rejection or expiry must never resume execution.** Once the outcome is recorded, the gated
    action is permanently refused for that attempt. Any re-attempt is a new attempt with a new
@@ -112,10 +136,28 @@ exactly the consistency burden that makes a single authoritative table valuable.
 - **Integration:** expiry fires at the configured deadline and is not extendable by the model, a tool,
   or an unauthenticated caller.
 
-## Open questions for the owner
+## Owner decision and remaining items
 
-1. Approve `failed` as the destination for rejected and expired approvals, or introduce a distinct
-   terminal state (for example `rejected`)?
-2. What is the default approval expiry window, and may it be configured per task type?
-3. Should an allowed transition table change such as this require an explicit owner sign-off every
-   time, or may agents extend it when an extension is clearly justified and recorded?
+Resolved by the owner on 2026-10-13:
+
+1. **`failed` as the destination, or a distinct terminal state?** → **`failed`**, with distinct structured `terminal_reason` codes: `approval_rejected` and `approval_expired`. No additional terminal state.
+2. **Default approval expiry window, configurable per task type?** → **24 hours default, configurable by task type.** The per-type values remain to be set.
+3. **Must a transition-table change always require explicit owner sign-off?** → **Yes for this table.** It is a security-relevant contract: a new edge here can authorize execution. An agent may *propose* an extension (recorded as an ADR) but may not apply one without owner acceptance.
+
+Still open (does not block the Milestone 2 transition function):
+
+- **Concrete per-task-type expiry values** beyond the 24-hour default.
+- **Notification behavior on near-expiry**, so a human is warned before a gate closes. Whether to notify at all, and how.
+- **Escalation path.** Whether an expiring approval may escalate to a different approver before it fails, or always fails. Current accepted behavior is that it fails; an escalation path would be a new decision.
+
+## Full accepted transition table
+
+```text
+queued          -> running | cancelled | blocked
+running         -> needs_approval | completed | failed | cancelled | blocked
+needs_approval  -> running | failed | cancelled | blocked
+blocked         -> queued | cancelled
+terminal:         completed | failed | cancelled      (never reopened)
+```
+
+Exactly one edge was added to the previous table: **`needs_approval → failed`**. `needs_approval → completed` is and remains forbidden.

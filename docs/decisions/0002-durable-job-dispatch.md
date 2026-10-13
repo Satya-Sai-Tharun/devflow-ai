@@ -1,10 +1,12 @@
 # 0002. Durable job dispatch and recovery strategy
 
-- **Status:** **Proposed** — requires owner confirmation before any worker code is written
-- **Date:** 2026-10-12
-- **Deciders:** project owner (decision required); agent recommendation
+- **Status:** **Accepted** — approved by the project owner on 2026-10-13
+- **Date:** 2026-10-12 (proposed); 2026-10-13 (accepted)
+- **Deciders:** project owner
 - **Related requirements:** PR-005, PR-008, PR-011, PR-012
 - **Related documents:** `ARCHITECTURE.md` §4/§8, `SPEC.md` § Worker semantics, `docs/DATABASE.md` § outbox, `docs/AGENT_RUNTIME.md`
+
+> **Owner decision (2026-10-13):** PostgreSQL transactional outbox, at-least-once delivery, idempotent processing, bounded retries, and audited dead-letter re-drive. **Redis is deferred and must not be required for correctness.**
 
 ## Context
 
@@ -18,17 +20,28 @@ This decision blocks Milestone 5 and must be settled before worker implementatio
 
 Adopt a **transactional outbox in PostgreSQL** as the durable dispatch mechanism, with the outbox table written in the *same transaction* as the task row.
 
-Recommended shape:
+Accepted shape:
 
 1. `POST /api/v1/tasks` opens one transaction: insert `tasks` row plus `outbox` row (`status = pending`). Commit. Return `202 Accepted`.
-2. A dispatcher loop claims outbox rows using `SELECT … WHERE status = 'pending' AND next_attempt_at <= now() FOR UPDATE SKIP LOCKED LIMIT n`, marks them `dispatched`, records the claim, and signals the worker.
+2. A dispatcher loop claims outbox rows using `SELECT … WHERE status = 'pending' AND next_attempt_at <= now() FOR UPDATE SKIP LOCKED LIMIT n`, marks them `claimed` and records the lease, then signals the worker.
 3. The worker may also poll the outbox directly, making Redis an optional notification accelerator rather than a correctness dependency.
 4. Workers claim work with a **lease** (owner identity + expiry). A worker that dies lets the lease expire; the job becomes reclaimable.
 5. Steps are made idempotent via per-attempt/per-step idempotency keys persisted in `task_steps` (see `docs/DATABASE.md`).
 
+**Canonical outbox status vocabulary: `pending`, `claimed`, `delivered`, `dead_letter`.** This is the schema authority in [`docs/DATABASE.md` §3.8](../DATABASE.md); an earlier draft of this record used the informal word "dispatched", which is **not** a status. The four states are deliberately distinct:
+
+| Status | Meaning |
+|---|---|
+| `pending` | Dispatch intent recorded, not yet claimed. The dispatcher's working set |
+| `claimed` | A worker/dispatcher holds a live lease; execution may be in flight. Crash-recoverable — an expired lease makes the row claimable again |
+| `delivered` | The job reached a terminal successful hand-off; no further delivery expected |
+| `dead_letter` | Retries exhausted. Not retried automatically; requires an audited operator re-drive that inserts a **new** outbox row and a new explicit attempt |
+
+`claimed` and `delivered` must not be collapsed into one state: the lease-reclaim sweep depends on distinguishing "in flight, recoverable" from "finished".
+
 **Guarantee this provides: at-least-once delivery.** Handlers must be idempotent. Exactly-once execution is *not* claimed and must not be documented or promised anywhere.
 
-Retry policy: bounded attempts with exponential backoff and jitter, a maximum attempt count, and transfer to a dead-letter state/table after exhaustion, requiring manual or operator-driven recovery.
+Retry policy: bounded attempts with exponential backoff and jitter, a maximum attempt count, and transfer to the `dead_letter` status after exhaustion, requiring an audited operator-driven re-drive.
 
 ## Alternatives considered
 
@@ -49,15 +62,23 @@ Retry policy: bounded attempts with exponential backoff and jitter, a maximum at
 
 ## Verification
 
-- **Unit:** outbox claim query is atomic under concurrency; state transitions from `pending`→`dispatched` are not double-applied.
+- **Unit:** outbox claim query is atomic under concurrency; state transitions from `pending`→`claimed` are not double-applied.
 - **Integration:** simulate a crash between task commit and dispatch — assert the task still executes after restart.
 - **Integration:** deliver the same job twice — assert exactly one effective state transition and no duplicated side effects.
 - **Integration:** kill a worker holding a lease — assert the job is reclaimed after lease expiry and completes.
 - **Integration:** exhaust retries — assert the job reaches dead-letter state and is observable, never silently dropped.
 - **Load:** measure dispatcher polling throughput and `SKIP LOCKED` contention; record whether Redis notification is justified by measurement, not intuition.
 
-## Open questions for the owner
+## Owner decision and remaining items
 
-1. Approve the outbox-in-PostgreSQL approach, or mandate a broker now?
-2. Add Redis notification in the first implementation, or defer until polling is measured as a bottleneck?
-3. Required recovery-time objective after a worker crash, which sets the lease duration?
+Resolved by the owner on 2026-10-13:
+
+1. **Approve the outbox-in-PostgreSQL approach, or mandate a broker now?** → **PostgreSQL transactional outbox approved.** No broker.
+2. **Add Redis notification in the first implementation?** → **Redis is deferred.** It must not be required for correctness; add it only when measurement justifies it.
+3. **Retry and dead-letter handling?** → **Bounded retries approved, with audited dead-letter re-drive.**
+
+Still open (does not block implementation; must be set before production tuning):
+
+- **Lease duration / recovery-time objective.** Must exceed the longest legitimate step and be renewed by heartbeat. Proposed starting value: **120 seconds**, with a 15-second heartbeat. A value that is too short causes duplicate concurrent execution of slow jobs; too long causes slow recovery.
+- **`max_attempts` default** for outbox rows before dead-lettering. Proposed: **5**.
+- **Backoff schedule** bounds. Proposed: 1 s base, ×2 growth, 30 s cap, with jitter.

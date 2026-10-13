@@ -1,10 +1,12 @@
 # 0008. Database identity strategy and migration tooling
 
-- **Status:** **Proposed** — required before the first migration
-- **Date:** 2026-10-12
-- **Deciders:** project owner (decision required); agent recommendation
+- **Status:** **Accepted** — approved by the project owner on 2026-10-13
+- **Date:** 2026-10-12 (proposed); 2026-10-13 (accepted)
+- **Deciders:** project owner
 - **Related requirements:** PR-001, PR-002, PR-003, PR-011
-- **Related documents:** `docs/DATABASE.md`, `SPEC.md` § Task lifecycle, `docs/API_CONTRACTS.md`, `docs/SECURITY.md`
+- **Related documents:** `docs/DATABASE.md`, `SPEC.md` § Task lifecycle, `docs/API_CONTRACTS.md`, `docs/SECURITY.md`, [`0011`](0011-data-access-layer.md)
+
+> **Owner decision (2026-10-13):** **PostgreSQL**; **SQLAlchemy 2.x asynchronous** access with **`asyncpg`**; **Alembic**; internal **`bigint` primary key**; separate public **UUIDv7** identifier. **Internal primary keys are never exposed.** The data-access layer is owned by [`0011`](0011-data-access-layer.md).
 
 ## Context
 
@@ -44,7 +46,7 @@ Additionally, the schema will evolve through the MVP, and `ARCHITECTURE.md` requ
 
 **Negative / accepted costs:** two identity columns and one extra unique index; a lookup by `public_id` on every API path (cheap, indexed); migration discipline and CI migration testing to maintain; the dual-identity mapping must be consistently applied by every serializer, which needs a test to prevent regression.
 
-**Note:** the choice of ORM versus query builder versus raw SQL is adjacent but separate. It affects whether Alembic is the natural migration tool and should be decided alongside this ADR.
+**Coupled decision — now owned.** The ORM/driver choice was previously listed here as unresolved with no owning record. It is now decided and owned by **[`0011` Data access layer](0011-data-access-layer.md)**: SQLAlchemy 2.x asynchronous access with `asyncpg`. See that record for session and transaction conventions. The Alembic choice above assumes it.
 
 ## Verification
 

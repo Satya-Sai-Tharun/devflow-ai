@@ -105,7 +105,7 @@
 | **Requirement** | Tasks can pause for an explicit human decision before configured consequential operations. |
 | **Components** | Approval endpoint; graph checkpoint pause/resume; tool gateway gate; dashboard approval UI |
 | **Authoritative spec** | `SPEC.md` § `POST /api/v1/tasks/{task_id}/approval`; `docs/API_CONTRACTS.md` § 6; `docs/AGENT_RUNTIME.md` |
-| **Required tests** | Integration: task pauses in `needs_approval`; approval accepted only when a decision is pending; rejection path; **unauthorized approver rejected**; expiry behavior; **a tool call or model output cannot satisfy an approval**; approval cannot be bypassed via the CLI path. |
+| **Required tests** | Integration: task pauses in `needs_approval`; **rejection transitions to `failed` with `terminal_reason=approval_rejected`**; **expiry transitions to `failed` with `terminal_reason=approval_expired`**; approval accepted only when a decision is pending; **unauthorized approver rejected**; **a tool call or model output cannot satisfy an approval**; **an expired approval permits no action and cannot resume the task**; approval is single-use and bound to its scope and state version; approval cannot be bypassed via the CLI path. |
 | **Evidence required** | Integration + adversarial test output; recorded approval audit record |
 | **Milestone** | 6–7 |
 | **Evidence status** | Not started |
@@ -295,7 +295,7 @@ Every requirement below is **Not started**: no code and no tests exist.
 | SR-18 | Request size/content-type/shape validated; submission, cancel, approve rate-limited | TM-D-01 | 3 | Not started |
 | SR-19 | Checkpoints integrity-protected, deserialized via safe typed schemas, policy re-validated on resume | TM-T-02, TM-AI-11 | 5 | Not started |
 | SR-20 | Verification derived only from executed checks; "not run" distinguished from "passed"; runs in sandbox | TM-T-05, TM-AI-07 | 5, 7 | Not started |
-| SR-21 | Health/readiness endpoints leak no version, host, connection, or configuration detail | TM-I-06 | 3, 4 | Not started |
+| SR-21 | Health/readiness endpoints leak no version, host, connection, or configuration detail | TM-I-06 | 3, 4 | Not started. **Contract defined** in `docs/API_CONTRACTS.md` §9.4: public `/healthz` and `/readyz` outside `/api/v1`, `/metrics` internal or token-gated, bodies carrying no version/host/connection/error detail |
 | SR-22 | Least-privilege DB roles per component; no application role can modify or delete audit records | TM-I-05, TM-T-06 | 2 | Not started |
 | SR-23 | Retention/deletion defined per artifact class with a working deletion path | TM-I-03 | 1, 9 | Not started — **blocked on ADR 0006** |
 | SR-24 | Sandbox egress and hosted-provider use governed by explicit documented policy | TM-AI-07, TM-AI-08 | 7 | Not started — **blocked on ADR 0005/0009** |

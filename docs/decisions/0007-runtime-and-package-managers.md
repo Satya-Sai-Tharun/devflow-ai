@@ -1,10 +1,12 @@
 # 0007. Runtime versions and package managers
 
-- **Status:** **Proposed** — required for Milestone 1; no owner decision recorded
-- **Date:** 2026-10-12
-- **Deciders:** project owner (decision required); agent recommendation
+- **Status:** **Accepted** — approved by the project owner on 2026-10-13
+- **Date:** 2026-10-12 (proposed); 2026-10-13 (accepted)
+- **Deciders:** project owner
 - **Related requirements:** PR-013, PR-015
 - **Related documents:** `PLAN.md` Milestone 1, `CODE_STYLE.md`, `docs/TESTING.md`
+
+> **Owner decision (2026-10-13):** **Python 3.12.x** with **`uv`**; **Node.js 22 LTS** with **`pnpm`**; a **single monorepo**. Tooling: **pytest**, **Ruff**, **Pyright**, **ESLint**, **TypeScript checking**, **Vitest**, and **Playwright**.
 
 ## Context
 

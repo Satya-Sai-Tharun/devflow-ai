@@ -1,10 +1,12 @@
 # 0004. Deployment topology and environments
 
-- **Status:** **Proposed** — requires owner decision before any deployment work
-- **Date:** 2026-10-12
-- **Deciders:** project owner (decision required); agent recommendation
+- **Status:** **Accepted** — approved by the project owner on 2026-10-13
+- **Date:** 2026-10-12 (proposed); 2026-10-13 (accepted)
+- **Deciders:** project owner
 - **Related requirements:** PR-005, PR-011, PR-012, PR-013
 - **Related documents:** `ARCHITECTURE.md` §8, `docs/SECURITY.md`, `docs/AGENT_RUNTIME.md`, `docs/DATABASE.md`
+
+> **Owner decision (2026-10-13):** Local-first development and CI, **separate API and worker processes**, and **Docker Compose for the local database environment**. **Do not select a production hosting target yet.**
 
 ## Context
 

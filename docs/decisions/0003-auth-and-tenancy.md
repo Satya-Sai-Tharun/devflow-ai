@@ -1,29 +1,31 @@
 # 0003. Authentication and tenancy model
 
-- **Status:** **Proposed** — requires owner decision before any non-public endpoint is exposed
-- **Date:** 2026-10-12
-- **Deciders:** project owner (decision required); agent recommendation
+- **Status:** **Accepted** — approved by the project owner on 2026-10-13
+- **Date:** 2026-10-12 (proposed); 2026-10-13 (accepted)
+- **Deciders:** project owner
 - **Related requirements:** PR-001, PR-002, PR-004, PR-006, PR-007, PR-010
 - **Related documents:** `docs/SECURITY.md`, `docs/THREAT_MODEL.md`, `docs/API_CONTRACTS.md` § Authentication, `docs/DATABASE.md`
 
+> **Owner decision (2026-10-13):** Dashboard authentication uses **Argon2id** password hashes and **revocable opaque server-side sessions**. CLI authentication uses **scoped, revocable personal access tokens**. Authorization is enforced **server-side and denies by default**. The **isolation boundary is a workspace, with an owning user**; workspace scope is preserved in the schema and in every relevant authorization and data-access path. Workspace membership and access-control requirements must be documented before they are implemented.
+
 ## Context
 
-Every task read, event stream, cancellation, approval, and result access must be authorized against the caller and its tenant/project boundary. `docs/SECURITY.md` states the invariant plainly: **an opaque task ID is not authorization.** Guessing or leaking an ID must never grant access.
+Every task read, event stream, cancellation, approval, and result access must be authorized against the caller and its workspace boundary. `docs/SECURITY.md` states the invariant plainly: **an opaque task ID is not authorization.** Guessing or leaking an ID must never grant access.
 
-Two questions are currently unresolved and block safe API and dashboard work:
+The two questions this record resolves:
 
-1. **How callers authenticate** (session cookie, bearer token, API key, OIDC).
-2. **Whether the system is single-tenant or multi-tenant**, and if multi-tenant, where the isolation boundary sits.
+1. **How callers authenticate** — answered: Argon2id + opaque server-side sessions for the dashboard; scoped personal access tokens for the CLI.
+2. **Where the isolation boundary sits** — answered: a **workspace**, owned by a user.
 
-This matters early because tenancy affects the schema (an owner/tenant column on `tasks`), the authorization check on every query, the SSE connection path, and whether PostgreSQL row-level security is worth adopting.
+This matters early because tenancy affects the schema (workspace and owner columns on `tasks`), the authorization check on every query, the SSE connection path, and whether PostgreSQL row-level security is worth adopting.
 
-## Decision (recommended)
+## Decision (accepted)
 
-**Authentication — start with a single, explicit mechanism and keep it replaceable.** Recommendation for the local/MVP stage: bearer credentials for the CLI and a secure, `HttpOnly`, `Secure`, `SameSite`-restricted session cookie for the dashboard, both resolving to one server-side principal object. Keep resolution behind a single dependency so the mechanism can be swapped without touching domain code.
+**Authentication.** Dashboard: username + password verified against an **Argon2id** hash, exchanged for an **opaque, high-entropy session token** whose **hash** is stored server-side in PostgreSQL and delivered as an `HttpOnly`, `Secure`, `SameSite` cookie, with absolute and idle TTLs and instant server-side revocation. CLI: **scoped personal access tokens** — opaque, high-entropy, displayed once, stored as a hash, individually revocable, with explicit scopes and expiry. Both resolve to one **principal object** behind a single dependency, so the mechanism can be replaced (for example by OIDC for team deployment) without touching domain code.
 
-**Tenancy — assume multi-tenant-capable from the first commit, even if only one tenant exists initially.** Concretely: every `tasks` row carries an owner/tenant identifier; every query is scoped by it; and the authorization function takes `(principal, resource)` and denies by default. Retrofitting tenancy later is far more expensive and error-prone than carrying a column that is constant in the MVP.
+**Tenancy — a workspace is the isolation boundary, with an owning user.** Every owned row carries a **workspace identifier**; every query is scoped by it; the authorization function takes `(principal, resource)` and denies by default. Retrofitting tenancy later is far more expensive and error-prone than carrying a column that is constant in the MVP.
 
-Recommended invariants, to be treated as security requirements:
+Accepted invariants, to be treated as security requirements:
 
 1. Deny by default; authorize on every read, stream, cancel, approve, and result access.
 2. Authorization is evaluated **server-side only**. No client-supplied claim, and **no model or tool output**, may grant or elevate access.
@@ -57,9 +59,18 @@ Recommended invariants, to be treated as security requirements:
 - **Adversarial:** an agent/tool/model output that claims elevated permission changes nothing about the effective authorization decision.
 - **Integration:** cancellation and result access are each authorized independently — authorization on one path never implies another.
 
-## Open questions for the owner
+## Owner decision and remaining items
 
-1. Which authentication mechanism for the MVP: local session + bearer, or integrate an identity provider immediately?
-2. Single-tenant or multi-tenant? If multi-tenant, is the isolation boundary a user, a team, or a project?
-3. Must a self-hosted deployment be able to run fully offline with no external identity provider?
-4. Is operator/admin capability in scope for the MVP, and who may hold it?
+Resolved by the owner on 2026-10-13:
+
+1. **Which authentication mechanism for the MVP?** → **Argon2id + revocable opaque server-side sessions** for the dashboard; **scoped, revocable personal access tokens** for the CLI. No identity provider in the MVP.
+2. **Single-tenant or multi-tenant, and what is the boundary?** → **A workspace is the isolation boundary, with an owning user.** Workspace scope is carried in the schema and enforced in every authorization and data-access path.
+3. **Authorization model?** → **Server-side, deny by default.**
+
+Still open — **must be documented before workspace access control is implemented** (required by the owner decision above):
+
+- **Workspace membership model and roles.** Who may be a member, what roles exist (for example owner / member / viewer), and what each role may do. This is a prerequisite for the Milestone 2 schema's membership table and for the authorization matrix.
+- **Offline self-hosting.** Whether a self-hosted deployment must run fully offline with no external identity provider. The accepted mechanism supports this today; confirm it is a requirement so it is not accidentally foreclosed.
+- **Operator/admin capability.** Whether it is in MVP scope and who may hold it. If added, it must be a separate explicitly-authorized role, never an implicit consequence of authentication.
+- **Credential lifecycle policy.** Password strength/complexity rules, Argon2id parameter targets, session absolute and idle TTL values, PAT maximum lifetime, and lockout thresholds after repeated failures.
+- **Workspace invitation/provisioning flow.** How a new user joins a workspace, and whether self-service workspace creation is permitted.

@@ -27,22 +27,27 @@
 - [`docs/decisions/`](docs/decisions/README.md) — ADRs 0001–0010 recording the previously unwritten decisions.
 - One open specification gap surfaced and documented: rejected/expired approval transitions ([`0010`](docs/decisions/0010-approval-outcome-transitions.md)). This blocks Milestone 2 until decided.
 
-### Decisions blocking Milestone 1
-Decisions are listed in the order they must be resolved, because several of them constrain the **database schema**, not just the milestone that consumes them.
+### Decision status entering Milestone 1
 
-| Decision | ADR | Must be resolved before | Why this early |
-|---|---|---|---|
-| Runtime versions and package managers | [0007](docs/decisions/0007-runtime-and-package-managers.md) | Any scaffolding, lockfile, or CI | Nothing is installable without it; it also decides single-package vs monorepo, which changes layout and import paths |
-| Authentication and tenancy | [0003](docs/decisions/0003-auth-and-tenancy.md) | **Milestone 2 schema**, not only Milestone 3 | The tenancy boundary determines whether `tasks.owner_id`/`tenant_id` exist and whether every query carries a scope predicate. Adding tenancy after the first migration is a schema change plus an authorization audit; do it first |
-| Durable job dispatch and recovery | [0002](docs/decisions/0002-durable-job-dispatch.md) | **Milestone 2 schema** (outbox), enforced in Milestone 5 | The chosen mechanism fixes the outbox shape, status vocabulary, and lease semantics that the migration will freeze |
-| Database identity and migrations | [0008](docs/decisions/0008-database-identity-and-migrations.md) | Milestone 2 schema | Decides primary/public identity split and the migration tool; depends on the ORM/driver choice, which currently has no owning ADR |
-| Approval outcome transitions | [0010](docs/decisions/0010-approval-outcome-transitions.md) | **Milestone 2 transition function** | `SPEC.md` has no legal transition for a rejected or expired approval. This **hard-blocks** the transition function and its test matrix — it is not deferrable to the approval milestone |
-| Deployment topology | [0004](docs/decisions/0004-deployment-topology.md) | Local dev stack, health/readiness contract | Determines the compose surface and whether health endpoints exist at all |
-| Model provider strategy and spend controls | [0005](docs/decisions/0005-model-provider-strategy.md) | Milestone 5 | Numeric spend ceilings and a global model-call concurrency limit are still absent |
-| Tool execution sandbox | [0009](docs/decisions/0009-tool-execution-sandbox.md) | Milestone 7 | Sandbox bounds (timeout, memory, egress) have no values yet |
-| Data retention and privacy | [0006](docs/decisions/0006-data-retention-and-privacy.md) | Before any content is stored | Security requirements `SR-23` and `SR-24` are unverifiable until this is Accepted |
+**Owner decisions recorded 2026-10-13.** Seven ADRs moved from Proposed to **Accepted**; three remain **Proposed and non-binding**. The full index is in [`docs/decisions/README.md`](docs/decisions/README.md).
 
-**Not every decision blocks Milestone 1.** Only `0007`, `0003`, `0008`, `0002`, and `0010` block the first two milestones; the rest unblock later ones. Resolve them in the order above.
+| Decision | ADR | Status | Must be resolved before | Why this early |
+|---|---|---|---|---|
+| Runtime versions and package managers | [0007](docs/decisions/0007-runtime-and-package-managers.md) | **Accepted** | Any scaffolding, lockfile, or CI | Python 3.12 + `uv`; Node 22 LTS + `pnpm`; single monorepo. Unblocks all of M1 |
+| Authentication and tenancy | [0003](docs/decisions/0003-auth-and-tenancy.md) | **Accepted** | **Milestone 2 schema**, not only Milestone 3 | Argon2id + revocable opaque sessions; scoped PATs for the CLI; **workspace** is the isolation boundary with an owning user. Determines the workspace/owner columns and every scope predicate. **Workspace membership roles still need documenting** before access control is implemented |
+| Database identity, migrations, and data access | [0008](docs/decisions/0008-database-identity-and-migrations.md), [0011](docs/decisions/0011-data-access-layer.md) | **Accepted** | Milestone 2 schema | Internal `bigint` PK + public UUIDv7 `public_id`; SQLAlchemy 2.x async + `asyncpg`; Alembic. The ORM choice now has an owning ADR (0011), which previously it did not |
+| Durable job dispatch and recovery | [0002](docs/decisions/0002-durable-job-dispatch.md) | **Accepted** | **Milestone 2 schema** (outbox), enforced in Milestone 5 | PostgreSQL transactional outbox; at-least-once; idempotent; bounded retries; audited dead-letter re-drive. **Redis deferred and never required for correctness.** Freezes the outbox status vocabulary (`pending`, `claimed`, `delivered`, `dead_letter`) |
+| Approval outcome transitions | [0010](docs/decisions/0010-approval-outcome-transitions.md) | **Accepted** | **Milestone 2 transition function** | `needs_approval → failed` added, with `terminal_reason` of `approval_rejected` or `approval_expired`. Previously a hard block; now unblocked |
+| Deployment topology | [0004](docs/decisions/0004-deployment-topology.md) | **Accepted** | Local dev stack, health/readiness contract | Local-first + CI; separate API and worker processes; Docker Compose for the local database. No production target selected yet |
+| MVP API contract | `docs/API_CONTRACTS.md` §4.1 | **Accepted** | Milestone 3 | `project_id` **removed**; no project entity or project-scoped endpoint in the MVP. Workspace tenancy supplies isolation |
+| Health / readiness | `docs/API_CONTRACTS.md` §9.4 | **Accepted** | Milestone 4 | Public `/healthz` and `/readyz` outside `/api/v1`; readiness reports dependency failure honestly; `/metrics` internal or token-gated |
+| Model provider strategy and spend controls | [0005](docs/decisions/0005-model-provider-strategy.md) | **Proposed — not binding** | Milestone 5 | Hosted-provider permission, concrete spend limits, and the local model/hardware baseline remain open. **Mock remains the default; hosted stays disabled** |
+| Data retention and privacy | [0006](docs/decisions/0006-data-retention-and-privacy.md) | **Proposed — not binding** | Before any content is stored | Retention windows, raw prompt retention, deletion behavior, and operator access remain open. `SR-23` is unverifiable until Accepted |
+| Tool execution sandbox | [0009](docs/decisions/0009-tool-execution-sandbox.md) | **Proposed — not binding** | Milestone 7 | Sandbox implementation, egress rules, approval-required operations, and resource ceilings remain open. **Tool permissions stay server-enforced and absence of an allow rule stays denial** |
+
+**Standing restrictions while 0005, 0006, and 0009 remain Proposed:** mock inference is the default for tests and CI; hosted providers are disabled by default; secrets are never logged; tool permissions are server-enforced and absence of an allow rule means denial; **an expired approval permits no action.**
+
+**Milestone 1 is unblocked.** Its prerequisites are all Accepted. Implementation tasks T2 onward additionally require the owner's explicit authorization to begin; see `.agent-state/CURRENT.md`.
 
 ## Milestone 1 — Repository and developer foundation
 - Audit tracked/untracked files, Git state, existing package managers, and tool instructions.

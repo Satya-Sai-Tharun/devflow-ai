@@ -60,10 +60,22 @@ Initial budgets:
 
 Do not combine LLM wait time with API server latency when assessing the submission endpoint.
 
-## Suggested quality gates
-Choose tools after inspecting current conventions. Typical candidates:
-- Python: pytest, Ruff, mypy or Pyright.
-- TypeScript: ESLint, TypeScript compiler, Vitest or Jest, Playwright for browser flows.
-- API: FastAPI TestClient/HTTPX.
-- Performance: Locust, k6, or a small repeatable HTTP benchmark.
-Do not install every candidate automatically. Select a minimal set and document the reason.
+## Quality gates and tooling
+
+**Tooling decided by the project owner on 2026-10-13** ([`decisions/0007`](decisions/0007-runtime-and-package-managers.md)). This list is binding; do not introduce a second tool for the same purpose without recording the reason.
+
+| Concern | Tool | Notes |
+|---|---|---|
+| Python test runner | **pytest** | Deterministic; the default suite makes no network calls |
+| Python lint + format | **Ruff** | One tool for both, configured once |
+| Python type checking | **Pyright** | **Not** mypy — one type checker only, to avoid conflicting diagnostics |
+| TypeScript lint | **ESLint** | Shared config across the monorepo |
+| TypeScript type checking | **`tsc --noEmit`** | Strict mode |
+| Frontend unit/component tests | **Vitest** | **Not** Jest |
+| Browser end-to-end tests | **Playwright** | Only where a browser flow genuinely needs it |
+| API testing | FastAPI TestClient / HTTPX | In-process where possible |
+| Performance | Not yet chosen | Deferred until Milestone 9; see [`PERFORMANCE.md`](PERFORMANCE.md). Do not adopt a load-testing tool speculatively |
+
+**Do not install every candidate automatically.** Install only the tools above, and record in `CODE_STYLE.md` the commands they run so local and CI invocations match.
+
+**Deferred, deliberately:** the performance/load-testing tool is the only open item in this list. It is a Milestone 9 decision, because a load tool chosen without a measured baseline is a guess.

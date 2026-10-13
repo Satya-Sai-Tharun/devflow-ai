@@ -1,9 +1,15 @@
 # Current Project State
 
-**Last verified:** by direct repository inspection at commit `57af064` (`main`), clean working tree.
+**Last verified:** by direct repository inspection at commit `e8a4d71` (`main`), clean working tree.
 **Product direction:** Confirmed MVP direction (owner-approved).
-**Active milestone:** Milestone 0 — documentation reconciliation — **substantially complete for the documentation layer**. Next is Milestone 1 — developer foundation.
+**Active milestone:** Milestone 0 — documentation reconciliation — **complete and committed**. Milestone 1 (developer foundation) is **prepared but not started**; see `PLAN.md`.
 **Implementation status:** **No application code exists.** This is a verified fact, not an assumption.
+
+### How the verification commit is checked
+
+`tools/validate-docs.ps1` verifies that the commit named below is a **real commit and an ancestor of current `HEAD`**. It deliberately does not require exact equality with `HEAD`: a document does not become false merely because a later commit exists, and an equality check would fail after every commit and train readers to ignore it. The check still fails if the recorded commit is unknown to the repository or has left `HEAD`'s history through a rewrite, reset, or rebase — both of which genuinely invalidate the verification.
+
+When more than one commit has landed since the recorded commit, re-run `git rev-parse HEAD`, compare, and update this file if the repository facts below changed.
 
 ---
 
@@ -14,19 +20,23 @@ Verified with `git rev-parse HEAD`, `git status --short`, and `git ls-files`:
 | Fact | Verified value |
 |---|---|
 | Branch | `main` |
-| HEAD at last audit | `57af064` |
-| Working tree at HEAD | Clean; no untracked files — this describes commit `57af064` **before** the documentation audit |
-| Working tree now | **Dirty, and that is expected.** The audit's documentation changes are uncommitted: modified `.agent-state/*`, `AGENTS.md`, `ARCHITECTURE.md`, `CLAUDE.md`, `PLAN.md`, `README.md`, `SPEC.md`, `docs/SECURITY.md`; new `PROJECT_CONTEXT.md`, `GEMINI.md`, `tools/`, `docs/THREAT_MODEL.md`, `docs/API_CONTRACTS.md`, `docs/AGENT_RUNTIME.md`, `docs/DATABASE.md`, `docs/DOCUMENTATION_INDEX.md`, `docs/REQUIREMENTS_TRACEABILITY.md`, `docs/decisions/`. **Nothing has been committed or pushed.** Do not read the "clean" row above as a current fact — re-run `git status --short` |
-| Tracked files at `57af064` | 18 — all Markdown except `LICENSE`, `.gitignore`, `.gitattributes` |
+| Verification commit | `e8a4d71` — an ancestor of `HEAD`; checked by the validator |
+| HEAD at time of writing | `e8a4d71`, in sync with `origin/main` |
+| Working tree | **Clean** at that commit |
+| Tracked files | 38 — documentation and one validator script; no application source |
 | Application source | None (no Python, no TypeScript/React, no entry points) |
 | Dependency manifests / lockfiles | None (no project-owned `pyproject.toml`, `requirements.txt`, or `package.json`) |
 | Tests / test configuration | None |
 | Migrations / schema | None |
 | CI/CD workflows | None — `.github/` contains only `copilot-instructions.md` |
-| Container / deployment files | None |
-| Environment examples | None (`.gitignore` already permits `!.env.example`; the file does not exist yet — `docs/SECURITY.md` requires it, and `PLAN.md` Milestone 1 produces it) |
-| Documentation validator | `tools/validate-docs.ps1` — passes (documentation checks only, not application tests) |
-| Gitignored tooling | `.agents/`, `.claude/`, `.codex/`, `.opencode/` (third-party skill libraries), `graphify-out/` |
+| Container / deployment files | None (`compose.yaml` is a Milestone 1 deliverable) |
+| Environment examples | None. `.gitignore` permits `!.env.example`; the file does not exist yet — `docs/SECURITY.md` requires it and `PLAN.md` Milestone 1 produces it |
+| Documentation validator | `tools/validate-docs.ps1` — documentation checks only, not application tests |
+| Gitignored tooling | `.agents/`, `.claude/`, `.codex/`, `.opencode/` (third-party skill libraries), `graphify-out/`, `.gemini/`, `.antigravity/` |
+
+### ADR approval status at this commit
+
+Seven ADRs are **Accepted** by explicit owner decision on 2026-10-13: `0002`, `0003`, `0004`, `0007`, `0008`, `0010`, `0011`. ADR `0001` is Accepted from the pre-existing owner-approved MVP direction. Three remain **Proposed** and are **not binding**: `0005` (model providers and spend), `0006` (retention and privacy), `0009` (tool sandbox). See `docs/decisions/README.md`.
 
 **Interpretation:** the repository is currently a **specification and documentation set** for software that has not been built. Every capability described in `PRD.md`, `SPEC.md`, and `ARCHITECTURE.md` is planned. No feature is implemented.
 
@@ -53,27 +63,27 @@ Initial **targets** (never measured, never achieved): task submission p95 < 200 
 
 ## Documentation layer status
 
-Reconciled in this pass:
+Reconciled and committed in `e8a4d71`; reconciled further in the ADR-approval pass of 2026-10-13:
 
 - `PROJECT_CONTEXT.md` created (previously referenced as the master briefing but **absent** from the repository and referenced by no file).
 - Source-of-truth map, ownership, and conflict rules documented in `docs/DOCUMENTATION_INDEX.md`.
 - Missing specifications created: `docs/THREAT_MODEL.md`, `docs/API_CONTRACTS.md`, `docs/AGENT_RUNTIME.md`, `docs/DATABASE.md`, `docs/REQUIREMENTS_TRACEABILITY.md`, `docs/decisions/`.
-- Internal Markdown link integrity verified across all tracked documents.
-- **Automated documentation validation added:** [`tools/validate-docs.ps1`](../tools/validate-docs.ps1) checks link integrity, code-fence balance, Mermaid block syntax, unqualified implementation/performance claims, ADR status validity and index completeness, canonical task-state coverage, commit-freshness against HEAD, and machine-specific absolute paths. **It passes** against the full set (33 documents, 274 links, 4 Mermaid diagrams) and was verified in both directions — deliberate defects were injected to confirm it detects them. It is not yet wired into CI because no CI exists.
+- **Seven ADRs accepted by explicit owner decision on 2026-10-13:** `0002`, `0003`, `0004`, `0007`, `0008`, `0010`, `0011` (0011 newly created). `0005`, `0006`, `0009` remain Proposed.
+- **Automated documentation validation:** [`tools/validate-docs.ps1`](../tools/validate-docs.ps1) checks link integrity, code-fence balance, Mermaid block syntax, unqualified implementation/performance claims, ADR status validity and index completeness, canonical task-state coverage, verification-commit ancestry, machine-specific absolute paths, and **line endings against the `.gitattributes` LF policy**. It was verified in both directions — deliberate defects were injected to confirm it detects them. **It is not yet wired into CI because no CI exists**; that is a Milestone 1 deliverable.
 
 ## Known traps
 
-- **`graphify-out/` is stale and low-value.** Built from commit `92b26715`; HEAD is `57af064`. Its ~3,369 nodes are dominated by third-party skill libraries, and there is no first-party source code to graph. `graphify-out/wiki/index.md`, referenced by `CLAUDE.md`, **does not exist**. Do not use the graph for architecture answers until regenerated against first-party sources.
+- **`graphify-out/` is stale and low-value.** Built from commit `92b26715`, which is far behind `HEAD`. Its ~3,369 nodes are dominated by third-party skill libraries, and there is no first-party source code to graph. `graphify-out/wiki/index.md`, referenced by `CLAUDE.md`, **does not exist**. Do not use the graph for architecture answers until regenerated against first-party sources.
 - **No CI exists.** Any "quality gate" language in the docs describes intent, not enforcement.
+- **The validator must be run manually** and will fail on line-ending violations; keep text files at LF.
 
 ---
 
 ## Next actions
 
-1. **Milestone 1 (developer foundation).** Owner decisions first: runtime versions, Python and Node package managers, target folder layout approval. Then scaffolding, `.env.example`, and format/lint/type-check/test commands.
-2. Confirm the durable job-dispatch/recovery strategy (`docs/decisions/0002-durable-job-dispatch.md`) before any worker code is written.
-3. Confirm authentication and tenancy (`docs/decisions/0003-auth-and-tenancy.md`) before any endpoint is exposed.
-4. Implement the task lifecycle domain and its tests (Milestone 2) before LangGraph, MCP, or RAG work.
-5. Update this file only after verifying actual repository changes and test results.
+1. **Milestone 1 (developer foundation).** Owner decisions for `0007`, `0003`, `0008`, `0011`, `0002`, and `0004` are now **recorded as Accepted** — the remaining prerequisite is the owner's authorization to begin the implementation tasks (T2 onward). T1-class documentation reconciliation is complete.
+2. `0005`, `0006`, and `0009` remain **Proposed** and must be accepted before model integration (M5), content storage, and tool/MCP integration (M7) respectively.
+3. Implement the task lifecycle domain and its tests (Milestone 2) only after the accepted transition table — including `needs_approval → failed` — is unambiguous. It now is.
+4. Update this file only after verifying actual repository changes and test results.
 
 **Do not commit or push** without explicit owner authorization.

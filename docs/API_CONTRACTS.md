@@ -504,7 +504,6 @@ are generated:
 ```json
 {
   "prompt": "Add password reset to this repository and test it.",
-  "project_id": "proj_01JQ8Y7A1B2C3D4E5F6G7H8J9K",
   "priority": "normal",
   "metadata": {
     "repo": "example/service",
@@ -514,13 +513,16 @@ are generated:
 }
 ```
 
+> **`project_id` removed — owner decision 2026-10-13.** No project entity, table, or endpoint is part of the MVP. **Workspace tenancy** (see `docs/decisions/0003-auth-and-tenancy.md`) supplies the isolation boundary; it is derived from the authenticated principal, not supplied by the client. Do not add a client-supplied scoping field. If a project concept is introduced later it is an **additive** change (a `projects` table, a nullable `tasks.project_id`, an endpoint, and a backfill), not a field to carry speculatively now.
+
 | Field | Type | Required | Constraints |
 |---|---|---|---|
 | `prompt` | string | yes | 1..N characters; `N` is an **Unresolved decision**; must be stored with its own retention policy |
-| `project_id` | string | **no — see note** | **This field is not specified by `SPEC.md` or `PRD.md` and has no backing entity.** No `projects` table or endpoint exists in `docs/DATABASE.md`. Do **not** implement it as a required field. Whether tasks are scoped to a project (and therefore whether a project entity is needed) is an **Unresolved decision** recorded in §10 row 14. Until that decision is Accepted, omit the field entirely. |
 | `priority` | enum | no | One of `low`, `normal`, `high`; default `normal` |
 | `metadata` | object | no | Bounded key count and value size; **untrusted data**, never interpreted as instructions or authorization |
 | `requested_timeout_ms` | integer | no | Bounded by server maximum; exceeding the max → `400`, not silent clamping |
+
+**No client-supplied scoping field.** The workspace is derived from the authenticated principal (see `docs/decisions/0003-auth-and-tenancy.md`), never from the request body. A caller cannot select the workspace it writes into.
 
 Success body — **exactly the `SPEC.md` shape** (`task_id`, `status`, `created_at`, `status_url`,
 `events_url`):
@@ -544,7 +546,7 @@ only thing `202` asserts.
 | `400 malformed_request` | Body is not valid JSON |
 | `400 validation_failed` | Schema violations, unknown enum value, out-of-range timeout |
 | `401 unauthenticated` | No/invalid credentials |
-| `403`-equivalent `not_found` | `project_id` is outside the caller's boundary (§4.6 policy) |
+| `404` `not_found` | The resource does not exist **or** lies outside the caller's workspace (§4.6 policy — deliberately indistinguishable, to prevent enumeration) |
 | `409 conflict_idempotency_key_reuse` | Same key, different body |
 | `409 conflict_request_in_progress` | Same key, first request still in flight (if that policy is chosen) |
 | `413 payload_too_large` | Body over the maximum |
@@ -860,28 +862,19 @@ documented and consistent with the CLI and dashboard.
 
 ### 6.3 Approve and reject
 
-- **Approve**: records the decision, transitions `needs_approval → running` per the `SPEC.md`
-  transition table, resumes the workflow at the gated step, and emits `approval.granted`.
-- **Reject**: records the decision and terminates the gated path. Policy decides whether the result is
-  `failed` (the operation is refused) or `cancelled` (the requester withdrew) — **Unresolved
-  decision** (§11). The transition is `needs_approval → running` only if the workflow can continue in
-  a reduced mode; otherwise it is `needs_approval → cancelled`/`failed`, which the `SPEC.md` table does
-  not permit directly, so the implementation must route through a legal path or the transition table
-  must be formally extended by the owner. **Do not assume an illegal transition is acceptable.**
-- Either way the decision is immutable once recorded. Changing a decision requires a new gate, not an
-  edit.
+**Owner-approved 2026-10-13** (`docs/decisions/0010-approval-outcome-transitions.md`). The outcomes below are settled, not proposals.
+
+- **Approve**: records the decision, transitions `needs_approval → running`, resumes the workflow at the gated step, and emits `approval.granted`. The approval is **single-use** and bound to the recorded action scope and state version.
+- **Reject**: records the decision and transitions `needs_approval → failed` with `terminal_reason = approval_rejected`. The gated action is **permanently refused for that attempt** — the model cannot re-request it and have it execute. It is *not* mapped to `cancelled` (which would misattribute the cause) and *not* to `blocked` (which would imply a resolvable external dependency).
+- Either way the decision is **immutable** once recorded. Changing a decision requires a new gate, not an edit. A later re-attempt is a **new attempt or a new task** with a new approval requirement.
 
 ### 6.4 Expiry of a pending approval
 
-- Pending approvals have an `expires_at`. Expiry is **not** an approval and not a rejection: it must be
-  recorded distinctly (for example a domain event plus an audit entry) and must move the task by a
-  legal transition. The likely outcomes are `blocked` (a dependency/policy condition is unresolved,
-  matching the `SPEC.md` description of `blocked`) or `cancelled` — **Unresolved decision** (§11).
-  A silent expiry that leaves the task in `needs_approval` forever is not acceptable; neither is
-  treating expiry as implicit approval.
-- After expiry, a late approval attempt returns `409 conflict_approval_not_pending`, and if the gate
-  was replaced by a newer one, the stale `approval_id` is rejected explicitly rather than being
-  applied to the new gate.
+- Pending approvals have an `expires_at`. **Accepted default: 24 hours**, configurable by task type.
+- **On expiry the task transitions `needs_approval → failed` with `terminal_reason = approval_expired`.** Expiry is recorded distinctly from rejection so that timeout is observable as its own outcome.
+- **Expiry is never approval and never authorizes execution.** A silent expiry that leaves the task in `needs_approval` forever is unacceptable; a fall-through to `running` is a security defect.
+- `blocked` is **not** the expiry outcome. It remains reserved for a non-approval policy condition that prevented the gate from being evaluated at all.
+- After expiry, a late approval attempt returns `409 conflict_approval_not_pending`, and if the gate was replaced by a newer one, the stale `approval_id` is rejected explicitly rather than being applied to the new gate.
 
 ### 6.5 Recorded data
 
@@ -1260,6 +1253,27 @@ recorded evidence: environment, runtime versions, workload, concurrency, warm/co
 percentiles, and the exact command. Because no implementation exists, there is currently **no
 measurement to report**.
 
+### 9.4 Operational endpoints — health, readiness, and metrics
+
+**Owner-approved 2026-10-13.** These endpoints are **unversioned and outside `/api/v1`**. They are not part of the product contract and must not appear in the generated client. `ARCHITECTURE.md` §8 and `docs/decisions/0004-deployment-topology.md` require them; `SR-21` constrains their content.
+
+| Endpoint | Process | Purpose | `200` when | `503` when | Access |
+|---|---|---|---|---|---|
+| `GET /healthz` | API | Liveness: the process is up and the event loop is responsive | Always, if the process is serving | Never — if it answers, it is live | **Public** |
+| `GET /readyz` | API | Readiness: can serve real traffic | Database reachable **and** migrations at head | Database unreachable or schema behind | **Public** |
+| `GET /healthz` | Worker | Liveness | Always, if the process is serving | Never | **Public** |
+| `GET /readyz` | Worker | Readiness: can claim work | Database reachable **and** a claim can be acquired (or the dispatcher is reachable) | Cannot claim work | **Public** |
+| `GET /metrics` | API, Worker | Metrics scrape | — | — | **Internal-only or token-gated.** Never public without authentication or a network restriction |
+
+Rules:
+
+- **Readiness must report dependency failures honestly.** If the database is unreachable, `/readyz` returns `503` — it must not return `200` and let a load balancer route traffic to a process that cannot serve it. A readiness check that always returns `200` is worse than no check, because it hides outages.
+- **`SR-21` — no information disclosure.** The body carries no version, commit SHA, hostname, connection string, driver error text, or configuration detail. Return `{"status":"ok"}` or `{"status":"degraded"}`. Log the detail server-side; never return it. `/metrics` is protected precisely because metric names and labels can leak topology and traffic shape.
+- **Readiness must be cheap.** A pooled `SELECT 1` with a short timeout — not a deep diagnostic. It runs frequently and must not become load.
+- **Distinct API and worker readiness.** An operator must be able to distinguish "the API is up" from "work is actually progressing". A single shared endpoint cannot express that, and that distinction is exactly what `ARCHITECTURE.md` requires.
+- **Unauthenticated by design.** A load balancer or orchestrator cannot supply credentials, so health and readiness cannot sit behind the product auth. Their safety comes from leaking nothing (`SR-21`) and from being non-mutating.
+- **No state changes, no side effects.** A readiness probe must never mutate data, claim work, or advance anything.
+
 ---
 
 ## 10. Open decisions requiring the owner
@@ -1276,13 +1290,13 @@ before the affected endpoints are implemented. Nothing here is approved by being
 | 5 | **Long-poll / polling fallback for SSE** (§7.7) | Required if proxies block SSE. Changes client architecture and adds load; must be decided deliberately, not discovered in production. |
 | 6 | **`403` vs `404` disclosure policy** (§4.6) | A deliberate, documented anti-enumeration choice; changing it later changes observable API behaviour. |
 | 7 | **`Idempotency-Key` required or optional** (§1.8) | Optional idempotency fails silently on retry; required idempotency shifts work to clients. |
-| 8 | **Rejection outcome** (`failed` vs `cancelled`) and **expiry outcome** (`blocked` vs `cancelled`) (§6.3, §6.4) | `SPEC.md`'s transition table does not allow a direct `needs_approval → failed`, so either policy or the transition table must change — an owner decision, not an implementation detail. |
+| ~~8~~ | **Approval rejection and expiry outcomes — RESOLVED 2026-10-13** | **`needs_approval → failed`**, with `terminal_reason` of `approval_rejected` or `approval_expired`. Default expiry 24 h, configurable by task type. Expiry never authorizes execution. See §6.3, §6.4 and `docs/decisions/0010-approval-outcome-transitions.md`. |
 | 9 | **Self-approval policy** per scope (§6.1) | A separation-of-duties control with real audit consequences. |
 | 10 | **Cancel-on-terminal response** (`409` vs `200` snapshot) (§5.3) | Changes client error handling and must match CLI/dashboard behaviour. |
 | 11 | **Concrete size, rate, and retention numbers** (§1.9, §7.8) | Bounds must be chosen with cost and abuse tolerance in mind; undocumented limits become support incidents. |
 | 12 | **`stream.keepalive` event vs comment-only heartbeat** (§7.5) | Affects client liveness detection and whether heartbeat traffic touches the task sequence. |
 | 13 | **`If-Match`/optimistic concurrency on writes** (§9.2) | Decides whether write races are resolved by state machine alone or additionally by precondition checks. |
-| 14 | **Project scoping** (§4.1, `project_id`) | `SPEC.md` and `PRD.md` define no project entity, yet a naive reading of the create-task body implies one, and `docs/DATABASE.md` has no `projects` table. Either tasks are scoped to a project (requiring an entity, an endpoint, and an authorization boundary) or they are not (requiring the field to be removed). An implementer must not guess: a required field with no backing entity makes task creation unimplementable. |
+| ~~14~~ | **Project scoping — RESOLVED 2026-10-13** | **No project entity or project-scoped endpoint in the MVP.** `project_id` is removed from the create-task contract; **workspace tenancy** (`docs/decisions/0003`) is the isolation boundary and is derived from the authenticated principal, never supplied by the client. Adding a project concept later is an additive change, not a reason to carry the field now. |
 | 15 | **Terminal-state retry path** (`Design-system.md` describes `failed` as "retryable") | `SPEC.md` makes `failed` terminal and no retry endpoint exists, so a retry affordance in the UI is unusable and would return `conflict_task_terminal`. Either a retry endpoint/new-attempt flow is specified, or the UI must present `failed` as terminal. |
 
 ## 11. Related documents
@@ -1298,4 +1312,4 @@ before the affected endpoints are implemented. Nothing here is approved by being
 - [`PERFORMANCE.md`](PERFORMANCE.md) — authoritative performance budgets and benchmark protocol; §9.3 defers to it.
 - [`DATABASE.md`](DATABASE.md) — persistence, indexing, retention, and ownership for tasks, events, approvals, and audit records.
 - [`AGENT_RUNTIME.md`](AGENT_RUNTIME.md) — adapter interfaces, workflow stages, execution bounds, and failure handling that produce these events.
-- [`decisions/0010-approval-outcome-transitions.md`](decisions/0010-approval-outcome-transitions.md) — the open decision on rejection/expiry outcomes flagged in §6.3, §6.4, and §10.
+- [`decisions/0010-approval-outcome-transitions.md`](decisions/0010-approval-outcome-transitions.md) — the **accepted** decision on rejection/expiry outcomes referenced in §6.3, §6.4, and §10.

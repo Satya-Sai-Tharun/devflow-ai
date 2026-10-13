@@ -119,19 +119,19 @@ Initial proposed states:
 - `cancelled`: task was cancelled and the worker acknowledged cancellation.
 - `blocked`: task cannot proceed because a required dependency or policy condition is unresolved.
 
-Initial transition model (enforce centrally in domain logic, not only in UI):
+Transition model (**owner-approved 2026-10-13**; enforce centrally in domain logic, not only in UI):
 
 ```text
-queued -> running | cancelled | blocked
-running -> needs_approval | completed | failed | cancelled | blocked
-needs_approval -> running | cancelled | blocked
-blocked -> queued | cancelled
-completed, failed, cancelled -> terminal
+queued          -> running | cancelled | blocked
+running         -> needs_approval | completed | failed | cancelled | blocked
+needs_approval  -> running | failed | cancelled | blocked
+blocked         -> queued | cancelled
+terminal:         completed | failed | cancelled   (never reopened)
 ```
 
 A retry should be represented deliberately: either create a new task/attempt or define a controlled transition with attempt history. Never silently reopen a terminal task. Every transition records actor, timestamp, prior state, next state, and reason where applicable.
 
-**Known gap (unresolved):** this transition set cannot express a rejected or expired approval, because `failed` is unreachable from `needs_approval`. `SPEC.md` § Known gap documents the issue and [`docs/decisions/0010-approval-outcome-transitions.md`](docs/decisions/0010-approval-outcome-transitions.md) records the recommended resolution. This must be decided before the domain transition function is implemented.
+**Approval outcomes.** `needs_approval` reaches `failed` with a structured `terminal_reason`: `approval_rejected` when a human declines, `approval_expired` when the decision window closes. A rejected or expired approval **never permits execution** — the gated action is permanently refused for that attempt, and the approval is bound to a specific action scope and state version and is single-use. **Silence is never consent**: a timeout must not fall through to `running`. `needs_approval → blocked` remains available only for non-approval policy conditions at the gate. `needs_approval → completed` is not permitted. Authoritative detail: `SPEC.md` § Approval outcomes; decision record: [`docs/decisions/0010-approval-outcome-transitions.md`](docs/decisions/0010-approval-outcome-transitions.md).
 
 ## 6. API and event flow
 
