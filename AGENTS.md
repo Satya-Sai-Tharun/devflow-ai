@@ -18,7 +18,7 @@ Before making changes, inspect Git status and read:
 Read the subject documents relevant to your change; you are not expected to read all of them for every task. Use `docs/DOCUMENTATION_INDEX.md` § 9 to find the right one quickly.
 
 ## Verified starting conditions
-This repository is currently **documentation and specification only**. There is no application code, no dependency manifest, no test suite, no migration, and no CI. Every capability described in the documents is **planned, not implemented**. Do not describe planned work as existing, and do not report a requirement as met without linked evidence (see `docs/REQUIREMENTS_TRACEABILITY.md`).
+At baseline commit `e82ba8f`, this repository contained documentation and specifications only. The uncommitted `feature/m1-api-foundation` work adds an initial Python API foundation; `.agent-state/CURRENT.md` records verified current facts. Product requirements remain planned unless evidence is linked (see `docs/REQUIREMENTS_TRACEABILITY.md`).
 
 Also follow existing tool-specific instructions (`CLAUDE.md`, `.github/copilot-instructions.md`, `.codex`, `.opencode`, `.agents`, and other agent configs). If instructions conflict, stop and report the conflict rather than silently deleting or weakening a rule.
 

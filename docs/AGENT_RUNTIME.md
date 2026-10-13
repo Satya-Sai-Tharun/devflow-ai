@@ -1,10 +1,10 @@
 # Agent Runtime Specification
 
-**Status:** Design specification only. **Not implemented.**
+**Status:** Agent runtime design specification. Workflow execution and agent orchestration are not implemented.
 
-> **Repository reality:** DevFlow AI is currently a documentation-only repository. There is **no application code, no dependency manifest, no test suite, and no CI**. Nothing in this document exists as a module, class, function, queue, table, or configuration key. Every interface, field, signature, bound, and diagram below is a **design specification to be implemented and verified later**. Treat every `text`, `python`, `json`, and `mermaid` block as a **sketch or contract proposal**, never as a description of working software.
+> **Repository reality:** An initial FastAPI foundation exists under `services/api/`, configured for Python 3.12 and `uv`, with PostgreSQL, async SQLAlchemy, Alembic, and the empty `0001_initial` baseline. Automated tests exist, and local test, lint, type-check, documentation-validation, and PostgreSQL acceptance results have been reported passing; these are local results, not CI results. The API foundation does not implement the worker, LangGraph workflows, agent adapters, tool gateway, or execution behavior described here. No CI workflow is configured. Treat the runtime interfaces, fields, bounds, and diagrams below as design specifications, not working software.
 >
-> Numeric values and technology choices that the owner has not approved are explicitly marked **Proposed** or **Unresolved decision**. No performance number, benchmark, or test result exists for this project, and none is claimed here.
+> Numeric values and technology choices that the owner has not approved are explicitly marked **Proposed** or **Unresolved decision**. No performance benchmark is reported for this project.
 
 ## 1. Status and scope
 

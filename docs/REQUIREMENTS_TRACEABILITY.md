@@ -2,7 +2,7 @@
 
 **Purpose:** Map every product requirement to the architecture that satisfies it, the test that will prove it, and the evidence required — so no requirement is silently dropped and no test is claimed without evidence.
 
-**Status of this document:** A **forward-looking plan**. The repository contains no application code and no tests. Every "Test" entry below is a *required future test*, and every "Evidence status" is **Not started** by definition. Do not read this table as reporting passing tests.
+**Status of this document:** Product requirements remain forward-looking. Milestone 1 adds partial foundation evidence for secret-safe configuration, health/readiness, and reproducible local setup; this does not satisfy broader product requirements.
 
 **Authoritative sources:** `PRD.md` (requirement text), `SPEC.md` (lifecycle and contract semantics), `ARCHITECTURE.md` (components). This document adds only the mapping and evidence expectations; where it appears to conflict with a source document, the source document wins.
 
@@ -20,7 +20,7 @@
 | **Evidence required** | Artifact that proves the requirement is satisfied |
 | **Milestone** | Delivering milestone per `PLAN.md` |
 
-**Evidence status legend:** `Not started` (no code) · `Partial` · `Met`. All rows are **Not started**.
+**Evidence status legend:** `Not started` / `Partial` / `Met`. Product requirement rows below remain `Not started`; partial foundation evidence is recorded for applicable non-functional/security requirements.
 
 ---
 
@@ -230,7 +230,7 @@
 | **Required tests** | Unit: redaction. Integration: error responses never contain internal paths, stack traces, or credentials. Review: `.gitignore` excludes environment files while permitting `.env.example`; a secret scan runs in CI. |
 | **Evidence required** | Secret-scan output; redaction test output |
 | **Milestone** | 1, continuous |
-| **Evidence status** | Not started |
+| **Evidence status** | Partial - configuration error tests verify malformed/missing settings are rejected without exposing supplied credentials; broader secret hygiene is unverified |
 
 ### NFR-03 — Bounded resource consumption
 
@@ -252,7 +252,7 @@
 | **Required tests** | CI: clean-clone install from lockfiles succeeds; lint, type-check, and unit tests pass from a clean checkout. |
 | **Evidence required** | Recorded CI run; documented setup commands that were actually executed |
 | **Milestone** | 1 |
-| **Evidence status** | Not started |
+| **Evidence status** | Partial - locked install, unit checks, lint, formatting, type checking, and documented Windows commands were run; clean-clone CI evidence is absent |
 
 ### NFR-05 — Security controls are tested, not asserted
 
@@ -271,7 +271,7 @@
 
 `docs/THREAT_MODEL.md` § 7 defines 25 testable security requirements, each derived from one or more of the 46 identified threats. They are reproduced here **only as an index** so that a reviewer can see coverage at a glance; `docs/THREAT_MODEL.md` is authoritative for their text, derivation, and test plan.
 
-Every requirement below is **Not started**: no code and no tests exist.
+Statuses below reflect the full security requirements, not just the foundation slice. SR-15 and SR-21 are **Partial** based on limited local evidence; other security requirements remain **Not started**.
 
 | SR | Summary | Primary threat(s) | Milestone | Status |
 |---|---|---|---|---|
@@ -289,13 +289,13 @@ Every requirement below is **Not started**: no code and no tests exist.
 | SR-12 | Wall-clock deadlines, iteration bounds, retry budgets, tool-call ceilings enforced | TM-D-02, TM-D-05, TM-AI-09 | 5 | Not started |
 | SR-13 | Per-task and per-tenant token/cost ceilings enforced before provider and tool calls | TM-AI-10 | 5 | Not started |
 | SR-14 | Model/tool/MCP/retrieved/repository content treated as untrusted data, never in the instruction position | TM-AI-02, TM-AI-03, TM-AI-04 | 5, 7 | Not started |
-| SR-15 | Secrets absent from tracked files, logs, and error envelopes; redacted at the logging boundary | TM-I-02 | 1 | Not started |
+| SR-15 | Secrets absent from tracked files, logs, and error envelopes; redacted at the logging boundary | TM-I-02 | 1 | Partial — configuration tests verify malformed/missing settings do not expose supplied credentials; broader tracked-file, logging, and redaction coverage remains unverified |
 | SR-16 | Idempotent job handling; duplicate delivery yields exactly one recorded effect | TM-T-03 | 5 | Not started |
 | SR-17 | Cancellation acceptance represented distinctly from worker-acknowledged `cancelled` | TM-R-02 | 6 | Not started |
 | SR-18 | Request size/content-type/shape validated; submission, cancel, approve rate-limited | TM-D-01 | 3 | Not started |
 | SR-19 | Checkpoints integrity-protected, deserialized via safe typed schemas, policy re-validated on resume | TM-T-02, TM-AI-11 | 5 | Not started |
 | SR-20 | Verification derived only from executed checks; "not run" distinguished from "passed"; runs in sandbox | TM-T-05, TM-AI-07 | 5, 7 | Not started |
-| SR-21 | Health/readiness endpoints leak no version, host, connection, or configuration detail | TM-I-06 | 3, 4 | Not started. **Contract defined** in `docs/API_CONTRACTS.md` §9.4: public `/healthz` and `/readyz` outside `/api/v1`, `/metrics` internal or token-gated, bodies carrying no version/host/connection/error detail |
+| SR-21 | Health/readiness endpoints leak no version, host, connection, or configuration detail | TM-I-06 | 3, 4 | Partial - generic `/healthz` and `/readyz` responses have unit and live outage evidence; full security requirement remains open |
 | SR-22 | Least-privilege DB roles per component; no application role can modify or delete audit records | TM-I-05, TM-T-06 | 2 | Not started |
 | SR-23 | Retention/deletion defined per artifact class with a working deletion path | TM-I-03 | 1, 9 | Not started — **blocked on ADR 0006** |
 | SR-24 | Sandbox egress and hosted-provider use governed by explicit documented policy | TM-AI-07, TM-AI-08 | 7 | Not started — **blocked on ADR 0005/0009** |
@@ -307,20 +307,21 @@ Every requirement below is **Not started**: no code and no tests exist.
 
 ## Coverage summary
 
-| Category | Count | Delivered | Verified |
-|---|---:|---:|---:|
-| Functional requirements (PR-xxx) | 15 | 0 | 0 |
-| Non-functional requirements (NFR-xx) | 5 | 0 | 0 |
-| Security requirements (SR-xx, `docs/THREAT_MODEL.md`) | 25 | 0 | 0 |
-| Identified threats (`docs/THREAT_MODEL.md`) | 46 | n/a | 0 mitigated |
-| Security checklist items (`docs/SECURITY.md`) | 7 | 0 | 0 |
-| Performance budgets (`docs/PERFORMANCE.md`) | 6 | n/a | **0 measured** |
-| Owner decisions recorded as ADRs | 10 | 1 Accepted, 9 Proposed | n/a |
+Counts below treat `Delivered` and `Verified` as complete requirement acceptance; partial foundations are shown separately.
 
-**Every row is unimplemented.** This table exists to prevent a future agent from claiming a requirement is satisfied, and to make the evidence obligation explicit before work starts.
+| Category | Count | Delivered | Partial | Verified |
+|---|---:|---:|---:|---:|
+| Functional requirements (PR-xxx) | 15 | 0 | 0 | 0 |
+| Non-functional requirements (NFR-xx) | 5 | 0 | 2 | 0 |
+| Security requirements (SR-xx, `docs/THREAT_MODEL.md`) | 25 | 0 | 2 | 0 |
+| Identified threats (`docs/THREAT_MODEL.md`) | 46 | n/a | n/a | 0 mitigated |
+| Security checklist items (`docs/SECURITY.md`) | 7 | 0 | 0 | 0 |
+| Performance budgets (`docs/PERFORMANCE.md`) | 6 | n/a | n/a | **0 measured** |
+| Owner decisions recorded as ADRs | 11 | n/a | n/a | 8 Accepted, 3 Proposed |
+
+**Product feature requirements remain unimplemented.** The initial foundation provides partial evidence only for rows marked Partial; this does not satisfy full product or security requirements.
 
 ---
-
 ## Maintenance rules
 
 1. **Update this table in the same change set** that implements or tests a requirement.

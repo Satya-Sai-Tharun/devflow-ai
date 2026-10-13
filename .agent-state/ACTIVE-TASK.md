@@ -1,9 +1,23 @@
 # Active Task
 
-**Task ID:** None
-**Status:** No active implementation task is established. Milestone 1 Task 1 is complete; implementation tasks require explicit owner authorization.
-**Last completed task:** M1-T2 coordinator proposal cleanup. The proposal and ADR were removed under owner authorization; no coordinator was implemented.
+**Task ID:** M1-PY-T1
+**Status:** M1-T1 acceptance verified on `feature/m1-api-foundation`; implementation remains uncommitted and unpushed for human review. Milestone 1 remains in progress.
+**Objective:** Python 3.12 FastAPI service, typed configuration, async PostgreSQL access, explicit Alembic baseline, `/healthz` and `/readyz`, tests, and Windows developer setup.
+**Scope exclusions:** Authentication, workspace authorization, membership roles, task/workflow domain, worker, LangGraph, Redis, frontend, deployment, and CI.
 
+## Handoff
+
+- API package: `services/api/devflow_api/`, matching `ARCHITECTURE.md`.
+- Runtime setup: root `pyproject.toml`, generated `uv.lock`, `.python-version`, placeholder `.env.example`, and local PostgreSQL `compose.yaml`.
+- Verification executed: default suite (15 passed, 1 integration deselected); PostgreSQL migration integration (1 passed on fresh `devflow_m1_acceptance_20261014_test`); Alembic repeat left revision/catalog unchanged; Pyright (0 diagnostics); Ruff lint/format; `git diff --check`; documentation validator (36 documents, 306 links, 4 Mermaid diagrams).
+- Live application-route checks against PostgreSQL: `/healthz` 200; `/readyz` 200 at head; `/readyz` 503 `{"status":"degraded"}` for an empty behind-head database and an unreachable port. FastAPI startup left `alembic_version` absent.
+- Relation-guard check: table, view, sequence, and foreign table in non-system schema `relation_guard`; integration test refused before migration and left `alembic_version` absent. Existing `devflow_test` was not modified.
+- Milestone 1 remains in progress because CI and human review/integration are outstanding; this verification does not complete the milestone.
+- Independent read-only review found no API/database findings. Its documentation findings (branch-name text, coverage counts, and validator false positive) were fixed and the reviewer confirmed resolution.
+- No files were staged or committed; no pushes or deployments were made.
+- Recommended next task: human review of this uncommitted feature branch; continue remaining Milestone 1 repository setup/CI work after review.
+
+---
 ## Previous task record (M1-T2)
 
 M1-T2 compared coordination designs and recorded a local MCP + SQLite coordinator proposal. Installed Codex, OpenCode, and Claude MCP entry points were inspected, but cross-client interoperability was not tested. OpenCode configuration inspection failed because of a machine-local log access error; GitHub CLI was unavailable. No coordinator or client configuration was implemented. Its proposal and ADR were later removed under explicit owner authorization.

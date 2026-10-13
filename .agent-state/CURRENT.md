@@ -1,10 +1,9 @@
 # Current Project State
 
-**Last verified:** 2026-10-13, at `b7b6fe9da27575e8c0b3261d57affd4626ccbcc4` on `dev` (also `origin/dev`). Task 1 governance is committed in that HEAD. The current documentation cleanup is uncommitted; see `.agent-state/ACTIVE-TASK.md`.
+**Last verified:** 2026-10-14, at `e82ba8f` (`dev` base) on `feature/m1-api-foundation`. Implementation changes are uncommitted and unpushed; the `dev` worktree remains unchanged.
 **Product direction:** Confirmed MVP direction (owner-approved).
-**Active milestone:** Milestone 0 — documentation reconciliation — **complete and committed**. Milestone 1 (developer foundation) is in progress; Task 1 (Git and development workflow governance) is committed. No further active implementation task is established; see `PLAN.md`.
-**Implementation status:** **No application code exists.** This is a verified fact, not an assumption.
-
+**Active milestone:** Milestone 1 developer foundation is in progress. The Python API foundation task is prepared for review; this does not complete Milestone 1.
+**Implementation status:** Initial FastAPI configuration, database lifecycle, health/readiness, baseline migration, Compose PostgreSQL, tests, and quality tooling are present as uncommitted changes. Authentication, workspace authorization, product domain, worker, frontend, and CI are not implemented.
 ### How the verification commit is checked
 
 `tools/validate-docs.ps1` verifies that the commit named below is a **real commit and an ancestor of current `HEAD`**. It deliberately does not require exact equality with `HEAD`: a document does not become false merely because a later commit exists, and an equality check would fail after every commit and train readers to ignore it. The check still fails if the recorded commit is unknown to the repository or has left `HEAD`'s history through a rewrite, reset, or rebase — both of which genuinely invalidate the verification.
@@ -15,30 +14,27 @@ When more than one commit has landed since the recorded commit, re-run `git rev-
 
 ## Verified repository facts
 
-Verified with `git rev-parse HEAD`, `git status --short`, and `git ls-files`:
+Verified at base commit `e82ba8f`; implementation paths below are uncommitted on the feature branch.
 
 | Fact | Verified value |
 |---|---|
-| Branch | `dev` (local; created for Milestone 1 Task 1) |
-| Verification commit | `170a1c8` — the verified `main` starting commit and an ancestor of `HEAD`; checked by the validator |
-| HEAD at M1-T2 start | `b7b6fe9da27575e8c0b3261d57affd4626ccbcc4`, in sync with `origin/dev` |
-| Working tree | Clean at M1-T2 start; this task's proposal documents and state updates are uncommitted |
-| Tracked files | 39 at M1-T2 start — documentation and one validator script; no application source |
-| Application source | None (no Python, no TypeScript/React, no entry points) |
-| Dependency manifests / lockfiles | None (no project-owned `pyproject.toml`, `requirements.txt`, or `package.json`) |
-| Tests / test configuration | None |
-| Migrations / schema | None |
-| CI/CD workflows | None — `.github/` contains only `copilot-instructions.md` |
-| Container / deployment files | None (`compose.yaml` is a Milestone 1 deliverable) |
-| Environment examples | None. `.gitignore` permits `!.env.example`; the file does not exist yet — `docs/SECURITY.md` requires it and `PLAN.md` Milestone 1 produces it |
-| Documentation validator | `tools/validate-docs.ps1` — documentation checks only, not application tests |
-| Gitignored tooling | `.agents/`, `.claude/`, `.codex/`, `.opencode/` (third-party skill libraries), `graphify-out/`, `.gemini/`, `.antigravity/` |
-
+| Branch | `feature/m1-api-foundation` based on `dev` |
+| Base commit | `e82ba8f` |
+| Verification commit | `170a1c8` (ancestor of current HEAD; checked by the documentation validator) |
+| Working tree | Contains uncommitted Milestone 1 API foundation work; original `dev` worktree is clean |
+| Application source | `services/api/devflow_api/` Python API foundation; no frontend, workflow, auth, or domain implementation |
+| Dependency manifests | `pyproject.toml`, `uv.lock`, `.python-version` |
+| Tests | pytest unit tests and a PostgreSQL integration test under `tests/` |
+| Migrations | Explicit empty Alembic baseline at `services/api/migrations/versions/0001_initial.py` |
+| Local database | PostgreSQL Compose service with persistent volume and health check |
+| CI/CD workflows | None |
+| Real PostgreSQL validation | Verified 2026-10-14 on isolated `_test` databases: fresh baseline/repeat, live readiness, startup without migrations, and relation guard |
+| Documentation validator | `tools/validate-docs.ps1`; run after documentation edits |
 ### ADR approval status at this commit
 
 Eight ADRs are **Accepted** (including owner-approved `0001`): `0001`–`0004`, `0007`, `0008`, `0010`, `0011`. `0005`, `0006`, and `0009` remain **Proposed** and are not binding. See `docs/decisions/README.md`.
 
-**Interpretation:** the repository is currently a **specification and documentation set** for software that has not been built. Every capability described in `PRD.md`, `SPEC.md`, and `ARCHITECTURE.md` is planned. No feature is implemented.
+**Interpretation:** the repository has an initial uncommitted API foundation. Product requirements in `PRD.md` and `SPEC.md` remain planned unless specifically evidenced; no product workflow is implemented.
 
 ---
 
@@ -81,9 +77,8 @@ Reconciled and committed in `e8a4d71`; reconciled further in the ADR-approval pa
 
 ## Next actions
 
-1. **Milestone 1 Task 1:** Git and development workflow governance is committed in `b7b6fe9`; the original validation evidence remains in the M1-T1 handoff.
-2. `0005`, `0006`, and `0009` remain **Proposed** and must be accepted before model integration (M5), content storage, and tool execution/MCP integration (M7) respectively.
-3. Implement the task lifecycle domain and its tests (Milestone 2) only after the accepted transition table — including `needs_approval → failed` — is unambiguous. It now is.
-4. Update this file only after verifying actual repository changes and test results.
+1. Complete review and human review of the uncommitted Milestone 1 API foundation.
+2. Continue Milestone 1 with remaining repository setup and CI work only after this feature is reviewed and integrated by its owner.
+3. Keep workspace membership roles unresolved; do not implement authorization until those semantics are decided.
 
 **Do not commit or push** without explicit owner authorization.

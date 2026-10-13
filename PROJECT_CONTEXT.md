@@ -37,21 +37,21 @@ The problem it addresses is not simply "how to generate code." Developers using 
 
 ## 2. Verified repository state
 
-**Verified facts as of commit `e8a4d71`.** This section is the antidote to stale assumptions; re-verify with the commands shown before trusting it.
+**Baseline verified:** commit `e82ba8f` on `dev`; implementation is prepared uncommitted on `feature/m1-api-foundation`. Verify current branch and worktree before relying on these changing facts.
 
 | Fact | Verified value |
 |---|---|
-| Branch | `main` |
-| HEAD | `e8a4d71`, in sync with `origin/main` (pushed) |
-| Working tree | **Clean** at that commit; the 2026-10-13 owner-decision reconciliation is applied on top and **uncommitted** |
-| Tracked files | 38 (documentation, plus `LICENSE`, `.gitignore`, `.gitattributes`, `tools/validate-docs.ps1`) |
-| Application source code | **None.** No Python, no TypeScript, no app entry points |
-| Dependency manifests / lockfiles | **None.** No `pyproject.toml`, `package.json` (project-owned), lockfiles |
-| Test suites / test config | **None** |
+| Branch | `feature/m1-api-foundation`, based on `dev` at `e82ba8f` |
+| HEAD | `e82ba8f` (same base as `dev`); implementation changes are uncommitted |
+| Working tree | Uncommitted Milestone 1 API foundation changes; see `.agent-state/ACTIVE-TASK.md` |
+| Tracked files | 39 tracked baseline files; API implementation files are currently untracked on the feature branch |
+| Application source code | Python API foundation under `services/api/devflow_api/` (uncommitted); no frontend or workflow code |
+| Dependency manifests / lockfiles | Python `pyproject.toml` and `uv.lock` (uncommitted); no frontend package manifest |
+| Test suites / test config | pytest unit tests and a PostgreSQL integration test under `tests/` (uncommitted) |
 | CI/CD workflows | **None.** `.github/` contains only `copilot-instructions.md` |
-| Docker / deployment files | **None** (`compose.yaml` is a Milestone 1 deliverable) |
-| Type of repository | **Documentation and specification only**, plus documentation tooling |
-| Executable scripts | **One:** `tools/validate-docs.ps1`, a documentation validator — not application code |
+| Docker / deployment files | Local PostgreSQL `compose.yaml` (uncommitted); no deployment files |
+| Type of repository | Documentation, specifications, and an initial uncommitted Python API foundation |
+| Executable scripts | Documentation validator plus the `devflow-api` entry point (uncommitted) |
 | Gitignored tooling | `.agents/`, `.claude/`, `.codex/`, `.opencode/` (installed skill libraries), `graphify-out/`, `.gemini/`, `.antigravity/` |
 
 **Ignored agent directories are anticipatory, not present.** `.gemini/` and `.antigravity/` are listed in `.gitignore` (lines 60–61) but **do not exist** in this checkout. Both rules are on the machine-local tooling list for consistency with the other agent directories; if either is created and holds project-owned instructions, it must be added to the cross-agent matrix in `AGENTS.md` and evaluated on its merits rather than remaining ignored by default.
@@ -66,7 +66,7 @@ git ls-files
 
 ### Environment configuration
 
-**`.env.example` does not exist yet.** It is a **Milestone 1 deliverable** (plan item T2) and is intentionally not created by documentation work. `.gitignore` already excludes `.env` and permits `!.env.example` — verified.
+**`.env.example` is present** with local placeholder values. `.gitignore` excludes `.env` and permits `!.env.example`; no real credentials are tracked.
 
 **Prefix convention:** application configuration uses `DEVFLOW_`. Genuinely conventional infrastructure keeps its ecosystem-standard names (`POSTGRES_*`) rather than being forced into the prefix.
 
@@ -86,8 +86,8 @@ git ls-files
 **Rules:** placeholders only in `.env.example` — never a real value; production secrets come from a secret manager, not a file; secrets are never logged (`SR-15`); and no agent may invent a variable name outside this table without updating it in the same change set.
 
 ### Consequences you must not ignore
-- **Every capability in `PRD.md`, `SPEC.md`, and `ARCHITECTURE.md` is planned, not implemented.** No task lifecycle, API, worker, dashboard, or CLI exists yet.
-- The roadmap starts at **Milestone 0/1**: documentation reconciliation, then developer foundation. Do not describe Milestone 3+ work as "existing."
+- **Product capabilities remain planned.** The initial API foundation implements only configuration, DB lifecycle, migrations, and health/readiness; no task lifecycle, authentication, workspace authorization, worker, dashboard, or product CLI exists.
+- Milestone 0 documentation reconciliation is complete; Milestone 1 developer foundation is in progress. Do not describe later milestone work as existing.
 - **No performance number has ever been measured.** All budgets are unverified targets. Never report one as achieved without recorded evidence (environment, load, percentiles, command).
 - `graphify-out/` is present but **stale and low-value for this repository** (see [§8](#8-known-caveats-and-traps)).
 
@@ -387,7 +387,7 @@ Record durable decisions as ADRs in `docs/decisions/NNNN-short-title.md` contain
 ## 12. Current status and next step
 
 - The owner has approved the high-level MVP direction in [§3](#3-owner-approved-mvp-direction).
-- The repository is **documentation-only**; no application code, manifests, tests, or CI exist.
+- The initial API foundation is present on the uncommitted feature branch; product workflows and CI remain unimplemented.
 - Implementation status, Git state, package managers, dependencies, and measurements must always be verified locally.
 - **No production-readiness, security-audit, or performance claim is implied by this document.**
 
@@ -397,4 +397,4 @@ Record durable decisions as ADRs in `docs/decisions/NNNN-short-title.md` contain
 
 ## 13. Quick-start prompt for any coding agent
 
-> You are working on DevFlow AI. Read `PROJECT_CONTEXT.md` first, then `AGENTS.md`, `PRD.md`, `SPEC.md`, `ARCHITECTURE.md`, `CODE_STYLE.md`, `docs/SECURITY.md`, `docs/THREAT_MODEL.md`, `docs/TESTING.md`, `docs/API_CONTRACTS.md`, `PLAN.md`, `.agent-state/CURRENT.md`, and `.agent-state/ACTIVE-TASK.md`, plus relevant tool-specific instructions and skills before editing. Inspect Git status and the actual repository tree. The repository currently contains **documentation only** — no application code exists. The owner-approved MVP is a Next.js + shadcn/ui dashboard, FastAPI + LangGraph backend, Python CLI using the same API, PostgreSQL durable state, optional Redis, a separate background worker, and SSE progress. Keep task submission fast; never run the whole graph in the submission request. Start with a tested task lifecycle and a mock worker before real model/tool integrations. Preserve existing work and agent configs. Propose material improvements with trade-offs and update all affected docs after approval. Do not claim tests or performance results without evidence. Do not commit or push unless explicitly requested. At the start, summarize your understanding, report conflicts/open decisions, and propose the smallest testable next step.
+> You are working on DevFlow AI. Read `PROJECT_CONTEXT.md`, then `AGENTS.md` and subject documents before editing. At baseline `e82ba8f` the repository contained specifications and documentation; the current feature branch contains an initial uncommitted Python API foundation. Verify Git status and `.agent-state/CURRENT.md`. The owner-approved MVP remains a Next.js + shadcn/ui dashboard, FastAPI + LangGraph backend, Python CLI using the same API, PostgreSQL durable state, optional Redis, a separate background worker, and SSE progress. Keep task submission fast; preserve existing work and agent configuration. Do not claim tests or performance results without evidence. Do not commit or push unless explicitly requested.

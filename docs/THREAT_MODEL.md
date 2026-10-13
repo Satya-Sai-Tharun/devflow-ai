@@ -1,6 +1,6 @@
 # DevFlow AI — Security Threat Model
 
-**Status:** Design-time analysis. **No control described in this document is implemented, enabled, tested, or verified.**
+**Status:** Design-time analysis, not a security audit. Most controls described here remain unimplemented or unverified. The initial API foundation provides limited, locally tested configuration and health/readiness behavior; it does not implement authentication, workspace authorization, workflow execution, or production security controls.
 **Authoritative companions:** [`docs/SECURITY.md`](SECURITY.md) owns the security baseline and review checklist. This document owns the analysis behind it.
 
 ---
@@ -9,21 +9,21 @@
 
 ### 1.1 What this document is
 
-This is a **design-time threat model for software that does not exist yet**. It exists so that the security decisions required by Milestone 7 of [`PLAN.md`](../PLAN.md) are made deliberately instead of being retrofitted after implementation.
+This is a **design-time threat model for a system whose product workflows are not implemented**. It exists so that security decisions are made deliberately as the system grows, rather than retrofitted after implementation.
 
-Every mitigation below is a **design requirement to be implemented**, written in the form it must eventually take. None of them should be read as a description of current behavior. At the time of writing:
+Every mitigation below is a **design requirement**, written in the form it must eventually take. Read each against the current evidence status in [`REQUIREMENTS_TRACEABILITY.md`](REQUIREMENTS_TRACEABILITY.md); do not infer that a full control is satisfied from foundation behavior. Current repository state:
 
-- The repository is documentation and specification only. There is no application code, no dependency manifest, no test suite, no CI workflow, and no deployment artifact.
-- No task lifecycle, API endpoint, worker, LangGraph graph, tool gateway, MCP integration, dashboard, or CLI exists.
-- No security control, limit, sandbox, test, or measurement has been exercised. No performance, reliability, or security claim in this document is evidence-backed.
-- Therefore this document contains **no finding about a running system**, because there is no running system. It contains assumptions, threats, and required controls.
+- An initial FastAPI application exists under `services/api/`, using Python 3.12, `uv`, Pydantic Settings, asynchronous SQLAlchemy, PostgreSQL, and Alembic with the empty `0001_initial` migration. Automated tests exist. Local verification results, including PostgreSQL acceptance, have been reported passing; these are not CI results. No CI workflow is configured.
+- No task lifecycle or product API endpoints, worker, LangGraph graph, tool gateway, MCP integration, dashboard, or CLI exists. The implemented API surface is limited to `/healthz` and `/readyz`.
+- Authentication, workspace authorization, workflow execution, agent orchestration, and production security controls remain unimplemented or unverified. Limited local evidence exists for secret-safe configuration errors and generic health/readiness responses; this does not establish production security.
+- This document contains no security audit finding or claim of production assurance. It records assumptions, threats, and required controls for the planned system.
 
 Where this document and [`docs/SECURITY.md`](SECURITY.md) overlap, SECURITY.md is authoritative for the baseline rule and this document is authoritative for the reasoning, threat identifiers, and verification expectations. This document must not weaken SECURITY.md. Where a difference is discovered, the conflict-resolution order in [`PROJECT_CONTEXT.md`](../PROJECT_CONTEXT.md) applies and §9 rule 2 of that document (security and safety constraints cannot be weakened silently) governs.
 
 ### 1.2 What this document is not
 
-- It is not a penetration test report, an audit, a certification, or a statement of compliance with any standard or regulation. No control has been assessed.
-- It is not a substitute for a security review of real code. It must be revisited when real code exists, because implementation always adds threats that design review does not predict.
+- It is not a penetration test report, an audit, a certification, or a statement of compliance with any standard or regulation. Limited local verification has exercised configuration errors and health/readiness behavior; no comprehensive security assessment has been completed, and production security controls remain unimplemented or unverified.
+- It is not a substitute for a security review of the implemented API or future product code. Revisit it as implementation expands, because code introduces threats that design review does not predict.
 - It is not a complete enumeration. Threat models are expected to be wrong by omission; the value is in the boundaries and invariants that survive review.
 
 ### 1.3 Analytical frame
