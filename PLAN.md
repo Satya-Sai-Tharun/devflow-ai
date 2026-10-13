@@ -50,13 +50,15 @@
 **Milestone 1 is unblocked.** Its prerequisites are all Accepted. Implementation tasks T2 onward additionally require the owner's explicit authorization to begin; see `.agent-state/CURRENT.md`.
 
 ## Milestone 1 — Repository and developer foundation
-- Audit tracked/untracked files, Git state, existing package managers, and tool instructions.
-- Propose a target folder layout without moving existing files until approved.
-- Select Python/Node versions and package managers.
-- Establish formatting, lint, type-check, test, and local run commands.
-- Add environment examples with placeholders only.
+- [x] Audit tracked/untracked files, Git state, existing package managers, and tool instructions.
+- [x] Confirm the API package location from `ARCHITECTURE.md`; create the initial API under `services/api/`.
+- [x] Select Python 3.12 and `uv` for the API; Node 22 LTS and `pnpm` remain the documented web choices.
+- [x] Establish pytest, Ruff, Pyright, Alembic, and API startup commands.
+- [x] Add `.env.example` with placeholders only.
 - Add minimal CI only after identifying current conventions.
 - Wire the existing documentation validator ([`tools/validate-docs.ps1`](tools/validate-docs.ps1)) into that CI as the first gate. It already runs and passes locally (see [`docs/DOCUMENTATION_INDEX.md`](docs/DOCUMENTATION_INDEX.md) § 7); no CI exists yet, so it is currently a manual step.
+
+**Current status:** M1-T1 API foundation and PostgreSQL acceptance verification are complete on the uncommitted feature/m1-api-foundation branch. Human review and CI remain outstanding, so Milestone 1 is not complete.
 
 **Exit:** Reproducible setup and baseline checks.
 

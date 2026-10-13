@@ -2,12 +2,9 @@
 
 ## Status and scope
 
-**This document is a design specification. Nothing described here is implemented.**
+**This document specifies the product API and transport conventions; most contracts below remain planned.** The initial API foundation exists under `services/api/`; `/healthz` and `/readyz` are implemented and have reported local verification. It does not implement the task, authentication, authorization, workflow, or SSE contracts below.
 
-It is not a claim that any endpoint exists, that any handler is wired, that any database table is
-migrated, or that any test passes. The repository is currently **documentation and specification
-only**: no application code, no dependency manifests, no test suites, and no CI. Every status code,
-header, schema, event type, and limit below is a contract *to be implemented and then verified*.
+The repository has a Python 3.12 FastAPI application, typed Pydantic Settings configuration, asynchronous SQLAlchemy PostgreSQL connectivity, and an explicit Alembic `0001_initial` baseline. `/healthz` is database-independent; `/readyz` checks database connectivity and migration state and returns a generic degraded 503 when readiness fails. Startup does not apply migrations. Local unit, PostgreSQL integration/acceptance, Pyright, Ruff, documentation-validator, and diff checks have been reported passing; these are local results, not CI results. See [`../.agent-state/ACTIVE-TASK.md`](../.agent-state/ACTIVE-TASK.md) and [`REQUIREMENTS_TRACEABILITY.md`](REQUIREMENTS_TRACEABILITY.md) for evidence scope.
 
 Where a choice is not owner-approved, it is labelled **Proposed** or **Unresolved decision**. A
 proposal recorded here is not a decision; it must not be quoted elsewhere as one.

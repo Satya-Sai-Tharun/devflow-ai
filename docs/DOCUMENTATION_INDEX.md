@@ -6,7 +6,7 @@
 2. **Is that document current, or does it make claims that have not been verified?**
 3. **What else must change in the same commit set so the documents stay consistent?**
 
-**Verified against:** commit `b7b6fe9` (`dev`), plus the owner-decision reconciliation of 2026-10-13. Consult Git status and diff for uncommitted changes.
+**Baseline verified against:** commit `e82ba8f` on `dev`; the Milestone 1 API foundation is uncommitted on its feature branch. Consult Git status and diff for current changes.
 
 ---
 
@@ -28,10 +28,10 @@ approval-outcome gap in `SPEC.md` stayed invisible (see [`decisions/0010`](decis
 | Navigation, orientation, verified repo state, conflict rules | [`../PROJECT_CONTEXT.md`](../PROJECT_CONTEXT.md) | Current | Summarizes and links only; owns nothing else |
 | Product scope, users, goals, non-goals, requirements `PR-001`…`PR-015`, acceptance criteria, success metrics | [`../PRD.md`](../PRD.md) | Current | Requirements unchanged by this audit |
 | Task states, allowed transitions, externally observable behavior, error-semantics baseline | [`../SPEC.md`](../SPEC.md) | Current — **one open gap** | § Known gap: rejected/expired approval has no transition |
-| System components, boundaries, data flow, performance/reliability/security architecture, delivery sequence | [`../ARCHITECTURE.md`](../ARCHITECTURE.md) | Current | Target layout is a proposal, not a description of the tree |
+| System components, boundaries, data flow, performance/reliability/security architecture, delivery sequence | [`../ARCHITECTURE.md`](../ARCHITECTURE.md) | Current | Target layout; the API foundation now exists under `services/api/` |
 | HTTP conventions, error envelope, endpoint shapes, SSE protocol, versioning, caching | [`API_CONTRACTS.md`](API_CONTRACTS.md) | Current | Extends `SPEC.md`; extensions are flagged |
 | Agent adapters, workflow stages, execution bounds, failure handling, idempotency | [`AGENT_RUNTIME.md`](AGENT_RUNTIME.md) | Current | § 9.4 cross-references the open approval decision |
-| Data model, migrations, indexing, retention, data ownership | [`DATABASE.md`](DATABASE.md) | Current | No schema exists; all DDL is illustrative |
+| Data model, migrations, indexing, retention, data ownership | [`DATABASE.md`](DATABASE.md) | Current | No product-domain schema exists; the empty baseline migration is implemented, and DDL sketches remain illustrative |
 | Security baseline and review checklist | [`SECURITY.md`](SECURITY.md) | Current | Concise checklist; links to the threat model |
 | Threat analysis: assets, trust boundaries, STRIDE, AI-specific threats, `SR-01`…`SR-25`, test plan | [`THREAT_MODEL.md`](THREAT_MODEL.md) | Current | Authoritative for security *analysis* |
 | Test levels, quality gates, performance measurement protocol | [`TESTING.md`](TESTING.md) | Current | |
@@ -40,7 +40,7 @@ approval-outcome gap in `SPEC.md` stayed invisible (see [`decisions/0010`](decis
 | Engineering conventions (Python, TypeScript, API, Git) | [`../CODE_STYLE.md`](../CODE_STYLE.md) | Current | |
 | Universal agent rules and single-agent development workflow | [`../AGENTS.md`](../AGENTS.md) | Current | Read-first list is authoritative for agents |
 | Milestone sequence and exit criteria | [`../PLAN.md`](../PLAN.md) | Current | Milestone 0 reconciled by this audit |
-| Requirement → component → test → evidence mapping | [`REQUIREMENTS_TRACEABILITY.md`](REQUIREMENTS_TRACEABILITY.md) | Current | Every row **Not started** — nothing is implemented |
+| Requirement to component to test to evidence mapping | [`REQUIREMENTS_TRACEABILITY.md`](REQUIREMENTS_TRACEABILITY.md) | Current | Product requirements remain not started; foundation requirements have partial evidence |
 | Durable decision records | [`decisions/`](decisions/README.md) | **8 Accepted, 3 Proposed** | Proposed records are non-binding |
 | Verified current milestone and status | [`../.agent-state/CURRENT.md`](../.agent-state/CURRENT.md) | Current | Verified against the real tree |
 | Active bounded task and handoff | [`../.agent-state/ACTIVE-TASK.md`](../.agent-state/ACTIVE-TASK.md) | Current | |
@@ -69,11 +69,11 @@ Two very different kinds of claim live in these files, and confusing them is the
 | Claim type | Where | Status |
 |---|---|---|
 | **Owner-approved direction** | `PRD.md`, `SPEC.md`, `ARCHITECTURE.md`, `PROJECT_CONTEXT.md` § 3, `decisions/0001` | Approved — may be built against |
-| **Design specification** | `API_CONTRACTS.md`, `AGENT_RUNTIME.md`, `DATABASE.md`, `THREAT_MODEL.md`, `SECURITY.md`, `TESTING.md`, `Design-system.md` | Specified, **not implemented** |
+| **Design specification** | `API_CONTRACTS.md`, `AGENT_RUNTIME.md`, `DATABASE.md`, `THREAT_MODEL.md`, `SECURITY.md`, `TESTING.md`, `Design-system.md` | Product contracts remain planned; the API foundation is partially implemented as summarized under test results and in the state handoff |
 | **Proposal** | `decisions/0002`–`0010` (except `0001`), and anything marked **Proposed** or **Unresolved decision** | **Not binding.** Do not cite as settled |
 | **Measured performance** | — | **None. Zero measurements exist** |
-| **Test results** | — | **None. No test suite exists** |
-| **Implemented feature** | — | **None. No application code exists** |
+| **Test results** | Local handoff reports 15 unit tests and one PostgreSQL migration integration test passing; Pyright, Ruff lint/format, documentation validation, and diff checks passed. Live PostgreSQL acceptance checks were also reported passing. These are local results, not CI results; see [`../.agent-state/ACTIVE-TASK.md`](../.agent-state/ACTIVE-TASK.md) for scope. |
+| **Implemented feature** | Initial API foundation exists uncommitted; product workflows remain unimplemented |
 
 **Rule:** before repeating any claim in a new document or a commit message, check which row it belongs to.
 Never promote a proposal to a decision, or a specification to an implementation, without evidence.

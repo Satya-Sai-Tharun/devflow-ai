@@ -584,7 +584,7 @@ else {
             $p = Join-Path $RepoRoot $d
             if (-not (Test-Path -LiteralPath $p)) { continue }
             $t = Read-TextFile -Path $p
-            if ($t -match '(?i)documentation-only|documentation and specification only|no application code|no dependency manifest') {
+            if ($t -match '(?i)(?:repository|checkout|project).{0,80}(?:documentation-only|documentation and specification only|no application code|no dependency manifest)|(?:documentation-only|documentation and specification only|no application code|no dependency manifest).{0,80}(?:repository|checkout|project)') {
                 $docsOnlyClaimants += $d
             }
         }

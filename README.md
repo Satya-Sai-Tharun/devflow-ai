@@ -14,7 +14,7 @@ DevFlow AI is a controlled agentic software-engineering platform for coordinatin
 The API should accept a task, persist task/dispatch intent, and return `202 Accepted` with a task ID. The background worker runs the longer agent workflow. Do not hold task-submission requests open while waiting for LLMs or tools.
 
 ## Current implementation status
-**This repository currently contains documentation and specifications only.** There is no application code, no dependency manifest, no test suite, no migration, and no CI. Every capability described below is planned, not implemented, and no performance target has been measured. Verified repository facts are recorded in [`PROJECT_CONTEXT.md`](PROJECT_CONTEXT.md) § 2 and [`.agent-state/CURRENT.md`](.agent-state/CURRENT.md).
+Milestone 1 Task 1 adds a minimal FastAPI service, PostgreSQL connectivity, an empty Alembic baseline, and automated checks. Authentication, workspace authorization, workflow execution, frontend, and CI remain unimplemented. No performance target has been measured. Verified repository facts are recorded in [`PROJECT_CONTEXT.md`](PROJECT_CONTEXT.md) § 2 and [`.agent-state/CURRENT.md`](.agent-state/CURRENT.md).
 
 ## Source-of-truth documents
 Start with [`PROJECT_CONTEXT.md`](PROJECT_CONTEXT.md) — the master briefing, verified repository state, and navigation hub. [`docs/DOCUMENTATION_INDEX.md`](docs/DOCUMENTATION_INDEX.md) is authoritative for *which document governs which subject* and for the change-management protocol.
@@ -42,26 +42,29 @@ Process and state:
 - [`CODE_STYLE.md`](CODE_STYLE.md) — engineering conventions.
 - [`Design-system.md`](Design-system.md) — UI tokens, shadcn/ui, accessibility and motion guidance.
 - [`PLAN.md`](PLAN.md) — milestone sequence and exit criteria.
-- [`docs/decisions/`](docs/decisions/README.md) — architecture decision records; **9 of 10 are still Proposed and need owner input**.
+- [`docs/decisions/`](docs/decisions/README.md) - architecture decision records; 8 accepted, 3 proposed.
 - [`.agent-state/CURRENT.md`](.agent-state/CURRENT.md) — verified current state.
 - [`.agent-state/ACTIVE-TASK.md`](.agent-state/ACTIVE-TASK.md) — active task and acceptance criteria.
 
 ## Development
 
-**There is nothing to install or run yet.** This repository contains documentation only: no dependency manifest, no application code, no test suite, no migration, and no CI. A clean clone yields no runnable software.
-
-The **one command that works today** validates the documentation set:
+Requirements: Windows PowerShell, Python 3.12 (managed by `uv`), and Docker Desktop for PostgreSQL integration checks. Copy `.env.example` to `.env`, replace its local placeholders, then run Compose.
 
 ```powershell
-powershell -File tools/validate-docs.ps1
+if (-not (Test-Path .env)) { Copy-Item .env.example .env }
+uv sync --locked
+docker compose up -d postgres
+uv run alembic upgrade head
+uv run pytest
+uv run ruff check .
+uv run ruff format --check .
+uv run pyright
+uv run devflow-api
 ```
 
-It checks link integrity, code-fence balance, Mermaid syntax, unsupported implementation/performance claims, ADR status honesty, lifecycle-contract consistency, and stale repository facts. It passes. It validates prose, not software — see [`docs/DOCUMENTATION_INDEX.md`](docs/DOCUMENTATION_INDEX.md) § 7 for what it does and does not prove.
+The API listens on `127.0.0.1:8000`. `/healthz` checks process liveness; `/readyz` also requires PostgreSQL and the current migration head. Migrations are explicit and are not run at startup. The integration test requires a disposable `<POSTGRES_DB>_test` database; create it once with `docker compose exec postgres sh -c 'createdb -U "$POSTGRES_USER" "${POSTGRES_DB}_test"'`, then run `uv run pytest -m integration`.
 
-**Setup and run commands are deliberately absent.** They will be added by [`PLAN.md`](PLAN.md) Milestone 1 *after* the runtime versions and package managers are decided and the commands have actually been run. Do not copy commands from a generic template and claim they work.
-
-**Building the first code is currently blocked on owner decisions** — principally [`docs/decisions/0007`](docs/decisions/0007-runtime-and-package-managers.md) (runtime versions and package managers), [`0003`](docs/decisions/0003-auth-and-tenancy.md) (auth and tenancy), and [`0010`](docs/decisions/0010-approval-outcome-transitions.md) (approval outcomes, which hard-blocks the task-lifecycle milestone). Nine of ten decision records are still **Proposed**; see [`docs/decisions/README.md`](docs/decisions/README.md) and [`PLAN.md`](PLAN.md) § Decisions blocking Milestone 1.
-
+Run `powershell -File tools/validate-docs.ps1` after Markdown changes. It validates documentation consistency, not application behavior; see [`docs/DOCUMENTATION_INDEX.md`](docs/DOCUMENTATION_INDEX.md) § 7.
 ## Engineering priorities
 1. Reliable task domain and explicit lifecycle.
 2. Low-latency task API and shared API contract.

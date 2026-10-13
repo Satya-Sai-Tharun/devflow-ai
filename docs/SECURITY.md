@@ -43,7 +43,7 @@ This is a design baseline, not a claim that controls are already implemented or 
 
 ## Security review checklist
 
-Each item maps to a testable requirement in [`THREAT_MODEL.md`](THREAT_MODEL.md). All items are **unchecked**: the repository contains no application code and no tests, so none of these controls exists or has been verified.
+Each item maps to a testable requirement in [`THREAT_MODEL.md`](THREAT_MODEL.md). All items remain **unchecked** because each checklist item covers broader product controls than this initial API foundation. Local tests provide limited evidence for secret-safe configuration errors and generic health/readiness responses; authentication, authorization, tool restrictions, sandboxing, approval gates, and product resource limits remain unimplemented or unverified. See [`REQUIREMENTS_TRACEABILITY.md`](REQUIREMENTS_TRACEABILITY.md) for partial evidence status.
 
 - [ ] Authentication and authorization tests cover task and SSE access. → `SR-01`, `SR-02`, `SR-03`
 - [ ] Secrets are absent from tracked files and logs. → `SR-15`

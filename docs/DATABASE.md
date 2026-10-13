@@ -2,9 +2,7 @@
 
 ## 1. Status and scope
 
-**Status:** Design specification. **Nothing described here exists.**
-
-Verified against `git ls-files`: 18 tracked files, essentially all Markdown, **no application code, no dependency manifest, no lockfile, no ORM dependency, no migration tooling, no migration files, no tests, no CI**. There is **no provisioned database, no schema, no table, no index, and no migration has been written or run**.
+**Status:** The product data model below remains a design specification. The initial API foundation has configured Python 3.12, `uv`, async SQLAlchemy, PostgreSQL, and Alembic, with the empty baseline migration `0001_initial`; it defines no product-domain tables. Local PostgreSQL migration and readiness acceptance checks have been reported passing. The local development database is not a production deployment.
 
 Every table, column, constraint, index, trigger, policy, and window below is a **Proposed design to be implemented**. No SQL block is a migration; each is an **illustrative DDL sketch**. Nothing here is a claim about deployed state or measured behavior.
 
@@ -658,7 +656,7 @@ The API role and the worker role are **separate database roles with separate cre
 
 ## 8. Migrations
 
-**No migration tooling, directory, or file exists in this repository, and this documentation task does not create or run any.**
+**Migration tooling and an initial Alembic revision now exist under `services/api/migrations/`. The baseline is intentionally empty; the product schema and domain migrations described in this document remain future work.**
 
 ### 8.1 Requirements
 

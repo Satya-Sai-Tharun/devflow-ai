@@ -54,7 +54,7 @@ devflow-ai/
 └── project source-of-truth documents
 ```
 
-This is a target layout, not a claim that these directories already exist. Avoid creating empty abstractions without a concrete use. Python code should not be imported directly by the TypeScript application; generate TypeScript contracts from OpenAPI or maintain a language-neutral schema.
+This is the target layout. The initial Python API foundation now exists under `services/api/`; the other listed application components remain planned. Avoid creating empty abstractions without a concrete use. Python code should not be imported directly by the TypeScript application; generate TypeScript contracts from OpenAPI or maintain a language-neutral schema.
 
 ## 4. Logical components
 

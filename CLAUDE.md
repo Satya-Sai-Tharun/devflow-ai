@@ -12,7 +12,7 @@ This project has a knowledge graph at graphify-out/ with god nodes, community st
 
 - It was built from commit `92b26715`, which is far behind `HEAD`.
 - Its ~3,369 nodes are dominated by the third-party skill libraries under `.agents/`, `.claude/`, `.codex/`, and `.opencode/` (which are gitignored and are not project sources).
-- There is currently **no first-party application code** to graph, because this repository is documentation-only.
+- At that verification point there was no first-party application code to graph. The initial API foundation now exists under `services/api/`, but the graph has not been refreshed to include it and remains incomplete for current codebase questions.
 - `graphify-out/wiki/index.md` **does not exist**, despite being referenced below.
 
 So: for DevFlow AI architecture or requirements questions, **read the Markdown source-of-truth documents** ([`PROJECT_CONTEXT.md`](PROJECT_CONTEXT.md) and [`docs/DOCUMENTATION_INDEX.md`](docs/DOCUMENTATION_INDEX.md)) rather than querying the graph. Re-run `graphify update .` (or a full rebuild excluding the gitignored skill directories) before trusting graph results again.
