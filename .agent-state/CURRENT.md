@@ -1,8 +1,8 @@
 # Current Project State
 
-**Last verified:** by direct repository inspection at commit `e8a4d71` (`main`), clean working tree.
+**Last verified:** 2026-10-13, at `170a1c89fb2d2d3a1b7026f11fc411b99df98fd8` on `dev`; the `dev` branch was created locally from the verified `main` HEAD. Governance documentation changes are uncommitted.
 **Product direction:** Confirmed MVP direction (owner-approved).
-**Active milestone:** Milestone 0 — documentation reconciliation — **complete and committed**. Milestone 1 (developer foundation) is **prepared but not started**; see `PLAN.md`.
+**Active milestone:** Milestone 0 — documentation reconciliation — **complete and committed**. Milestone 1 (developer foundation) is in progress; Task 1 (Git and multi-agent governance) is complete locally and uncommitted; see `PLAN.md` and `.agent-state/ACTIVE-TASK.md`.
 **Implementation status:** **No application code exists.** This is a verified fact, not an assumption.
 
 ### How the verification commit is checked
@@ -19,10 +19,10 @@ Verified with `git rev-parse HEAD`, `git status --short`, and `git ls-files`:
 
 | Fact | Verified value |
 |---|---|
-| Branch | `main` |
-| Verification commit | `e8a4d71` — an ancestor of `HEAD`; checked by the validator |
-| HEAD at time of writing | `e8a4d71`, in sync with `origin/main` |
-| Working tree | **Clean** at that commit |
+| Branch | `dev` (local; created for Milestone 1 Task 1) |
+| Verification commit | `170a1c8` — the verified `main` starting commit and an ancestor of `HEAD`; checked by the validator |
+| HEAD at task start | `170a1c89fb2d2d3a1b7026f11fc411b99df98fd8`, in sync with `origin/main` |
+| Working tree | Clean at task start; governance documentation changes remain uncommitted on `dev` |
 | Tracked files | 38 — documentation and one validator script; no application source |
 | Application source | None (no Python, no TypeScript/React, no entry points) |
 | Dependency manifests / lockfiles | None (no project-owned `pyproject.toml`, `requirements.txt`, or `package.json`) |
@@ -81,9 +81,11 @@ Reconciled and committed in `e8a4d71`; reconciled further in the ADR-approval pa
 
 ## Next actions
 
-1. **Milestone 1 (developer foundation).** Owner decisions for `0007`, `0003`, `0008`, `0011`, `0002`, and `0004` are now **recorded as Accepted** — the remaining prerequisite is the owner's authorization to begin the implementation tasks (T2 onward). T1-class documentation reconciliation is complete.
-2. `0005`, `0006`, and `0009` remain **Proposed** and must be accepted before model integration (M5), content storage, and tool/MCP integration (M7) respectively.
-3. Implement the task lifecycle domain and its tests (Milestone 2) only after the accepted transition table — including `needs_approval → failed` — is unambiguous. It now is.
-4. Update this file only after verifying actual repository changes and test results.
+1. **Milestone 1 Task 1:** Git and multi-agent governance rules were updated in `AGENTS.md`; `dev` was created locally from the verified `main` HEAD. Both required documentation checks passed. Changes are uncommitted.
+2. Establish the shared agent coordination mechanism. Do not claim independent CLI sessions communicate automatically; verify any actual messaging implementation separately.
+3. **Milestone 1 (developer foundation).** Owner decisions for `0007`, `0003`, `0008`, `0011`, `0002`, and `0004` are recorded as **Accepted**; owner authorization is still required to begin implementation tasks T2 onward.
+4. `0005`, `0006`, and `0009` remain **Proposed** and must be accepted before model integration (M5), content storage, and tool/MCP integration (M7) respectively.
+5. Implement the task lifecycle domain and its tests (Milestone 2) only after the accepted transition table — including `needs_approval → failed` — is unambiguous. It now is.
+6. Update this file only after verifying actual repository changes and test results.
 
 **Do not commit or push** without explicit owner authorization.

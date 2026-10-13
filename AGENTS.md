@@ -68,6 +68,22 @@ MVP: Next.js App Router + shadcn/ui dashboard; Python FastAPI API; LangGraph wor
 - Do not commit, push, publish, deploy, or create external resources unless explicitly asked.
 - Ask when a decision affects security, data retention, deployment, cost, or product scope.
 
+## Git branches and integration
+- `main` is the stable, reviewed release branch. `dev` is the integration branch for approved implementation work.
+- Use `feature/<short-description>` for feature implementation, `fix/<short-description>` for bug fixes, `test/<short-description>` for testing infrastructure or test-focused changes, `docs/<short-description>` for documentation-only work, and `chore/<short-description>` for tooling and maintenance. Branch names must be lowercase and use hyphens.
+- Before any branch operation, inspect `git status`, the current branch, `HEAD`, and available local and remote branches. Never create a branch without checking whether it already exists.
+- Feature branches start from the current, verified `dev` branch unless the task explicitly requires another base. Do not develop features directly on `main` or `dev`.
+- Integrate reviewed feature branches into `dev` through pull requests. Promote `dev` to `main` only through an explicitly authorized, reviewed release.
+- Never force-push, rewrite shared history, or bypass required checks. Never commit, push, merge, publish, or deploy without explicit owner authorization.
+
+## Parallel agent isolation and communication
+- Each implementation agent must use a separate Git worktree and task-specific branch. Never run multiple implementation agents against the same writable working directory.
+- Assign one writer per feature and shared file. Establish file ownership and API contracts before parallel work. Reviewers may inspect concurrently but must not modify another agent's worktree.
+- Integrate agent work through a designated coordinator. Agents must not independently merge or push.
+- Before starting or modifying a shared interface, consult the shared coordination record. Every task must record its ID, objective, owner, branch, worktree, permitted files and file ownership, dependencies and API/schema contracts, status, questions, blockers, decisions, test evidence, handoff requirements, and next action.
+- Publish blockers and proposed decisions in the coordination record instead of silently guessing. Coordinate changes to shared contracts, dependencies, configuration, migrations, and agent rules explicitly. Security, architecture, dependency, and product-scope changes require owner approval where existing rules require it.
+- Do not assume independent CLI sessions can communicate automatically. Any actual messaging or coordinator implementation must be separately verified before it is described as available.
+
 ## Engineering rules
 - Keep HTTP request handlers short; never await the full agent workflow during task submission.
 - Use explicit task state transitions and test invalid transitions.
@@ -82,6 +98,7 @@ MVP: Next.js App Router + shadcn/ui dashboard; Python FastAPI API; LangGraph wor
 
 ## Documentation rules
 - `docs/DOCUMENTATION_INDEX.md` § 2 defines which document is authoritative for each subject. Change the authoritative document, then update every document that restates it, in the same change set.
+- After any documentation change, run `powershell -File tools/validate-docs.ps1` and report the actual result in the handoff.
 - Never restate a contract in a second document; summarize and link instead.
 - Mark anything not owner-approved as **Proposed** or **Unresolved decision**. A proposal is not a decision and must not be cited as one.
 - `docs/PERFORMANCE.md` is authoritative for performance budgets. Record a benchmark only with environment, workload, concurrency, duration, percentiles, and the exact command.

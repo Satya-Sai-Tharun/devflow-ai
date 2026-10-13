@@ -1,5 +1,23 @@
 # Active Task
 
+**Task ID:** M1-T1
+**Title:** Git and multi-agent governance
+**Status:** Governance documentation updated and validated locally on `dev`; changes remain uncommitted.
+**Owner:** Primary implementation agent
+**Branch and worktree:** `dev` at `170a1c89fb2d2d3a1b7026f11fc411b99df98fd8`; repository worktree (no parallel implementation agents)
+**Objective:** Extend `AGENTS.md` with branch, isolation, and coordination requirements; remove duplicated rules from the Copilot adapter after finding a concrete inconsistency; validate and create local `dev` from verified `main` without committing or pushing.
+**Permitted files:** `AGENTS.md`, `.github/copilot-instructions.md` (adapter-only cleanup), `.agent-state/CURRENT.md`, `.agent-state/ACTIVE-TASK.md`.
+**File ownership:** Primary implementation agent is sole writer of the permitted files for this task.
+**Dependencies and contracts:** `AGENTS.md` remains the universal source of agent rules; Copilot adapter remains a thin pointer. No shared coordinator implementation exists or is assumed.
+**Questions / blockers / decisions:** No blocker observed. Next coordination decision is to establish the shared agent coordination mechanism; this task does not select or implement it.
+**Test evidence:** `git diff --check` passed. `powershell -File tools/validate-docs.ps1` passed (35 documents, 312 links, 4 Mermaid diagrams). No application test suite exists.
+**Handoff requirements:** Report changed files, before/after branch and HEAD, validation commands/results, local `dev` status, and unresolved coordination decisions.
+**Next action:** Establish the shared agent coordination mechanism; no independent CLI-session messaging capability is assumed.
+
+---
+
+## Previous task record (superseded)
+
 **Task ID:** ARCH-002
 **Title:** Reconcile the documentation set with the verified repository and create the missing implementation-ready specifications
 **Status:** Documentation changes applied locally. Not committed. No application code written.
