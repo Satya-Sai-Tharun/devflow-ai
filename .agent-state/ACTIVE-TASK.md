@@ -1,7 +1,7 @@
 # Active Task
 
 **Task ID:** M1-PY-T1
-**Status:** M1-T1 acceptance verified on `feature/m1-api-foundation`; implementation remains uncommitted and unpushed for human review. Milestone 1 remains in progress.
+**Status:** M1-T1 API foundation merged into `dev` by PR #2 at `f373ebc`. Milestone 1 remains in progress because CI is outstanding.
 **Objective:** Python 3.12 FastAPI service, typed configuration, async PostgreSQL access, explicit Alembic baseline, `/healthz` and `/readyz`, tests, and Windows developer setup.
 **Scope exclusions:** Authentication, workspace authorization, membership roles, task/workflow domain, worker, LangGraph, Redis, frontend, deployment, and CI.
 
@@ -9,13 +9,13 @@
 
 - API package: `services/api/devflow_api/`, matching `ARCHITECTURE.md`.
 - Runtime setup: root `pyproject.toml`, generated `uv.lock`, `.python-version`, placeholder `.env.example`, and local PostgreSQL `compose.yaml`.
-- Verification executed: default suite (15 passed, 1 integration deselected); PostgreSQL migration integration (1 passed on fresh `devflow_m1_acceptance_20261014_test`); Alembic repeat left revision/catalog unchanged; Pyright (0 diagnostics); Ruff lint/format; `git diff --check`; documentation validator (36 documents, 306 links, 4 Mermaid diagrams).
+- Prior local verification: PostgreSQL migration integration (1 passed on fresh `devflow_m1_acceptance_20261014_test`); Alembic repeat left revision/catalog unchanged; additional live PostgreSQL acceptance checks are listed below. These DB checks were not rerun for PR #2.
 - Live application-route checks against PostgreSQL: `/healthz` 200; `/readyz` 200 at head; `/readyz` 503 `{"status":"degraded"}` for an empty behind-head database and an unreachable port. FastAPI startup left `alembic_version` absent.
 - Relation-guard check: table, view, sequence, and foreign table in non-system schema `relation_guard`; integration test refused before migration and left `alembic_version` absent. Existing `devflow_test` was not modified.
-- Milestone 1 remains in progress because CI and human review/integration are outstanding; this verification does not complete the milestone.
+- Local PR #2 checks: pytest (15 passed, 1 integration deselected), Pyright (0 diagnostics), Ruff lint/format, docs validator (36 documents, 310 links, 4 Mermaid diagrams), and `git diff --check` passed. No CI workflow is configured.
 - Independent read-only review found no API/database findings. Its documentation findings (branch-name text, coverage counts, and validator false positive) were fixed and the reviewer confirmed resolution.
-- No files were staged or committed; no pushes or deployments were made.
-- Recommended next task: human review of this uncommitted feature branch; continue remaining Milestone 1 repository setup/CI work after review.
+- PR #2 was committed as `acdd0d64f22539d745ae2d19972c788a45879f8b`, pushed, and merged into `dev` as `f373ebcccac6984cc0c957127d804ccd40b6980b`.
+- Recommended next task: add CI and wire in the documentation validator; keep Milestone 1 in progress until its remaining exit criteria are met.
 
 ---
 ## Previous task record (M1-T2)

@@ -37,21 +37,20 @@ The problem it addresses is not simply "how to generate code." Developers using 
 
 ## 2. Verified repository state
 
-**Baseline verified:** commit `e82ba8f` on `dev`; implementation is prepared uncommitted on `feature/m1-api-foundation`. Verify current branch and worktree before relying on these changing facts.
+**Current state verified:** M1 API foundation merged into `dev` by PR #2 at `f373ebc`, based on `e82ba8f`. Verify current branch and worktree before relying on changing local state.
 
 | Fact | Verified value |
 |---|---|
-| Branch | `feature/m1-api-foundation`, based on `dev` at `e82ba8f` |
-| HEAD | `e82ba8f` (same base as `dev`); implementation changes are uncommitted |
-| Working tree | Uncommitted Milestone 1 API foundation changes; see `.agent-state/ACTIVE-TASK.md` |
-| Tracked files | 39 tracked baseline files; API implementation files are currently untracked on the feature branch |
-| Application source code | Python API foundation under `services/api/devflow_api/` (uncommitted); no frontend or workflow code |
-| Dependency manifests / lockfiles | Python `pyproject.toml` and `uv.lock` (uncommitted); no frontend package manifest |
-| Test suites / test config | pytest unit tests and a PostgreSQL integration test under `tests/` (uncommitted) |
+| Branch | `dev`, containing M1 API foundation merge commit `f373ebc` |
+| Merge commit | PR #2, `f373ebcccac6984cc0c957127d804ccd40b6980b`; feature commit `acdd0d64f22539d745ae2d19972c788a45879f8b` |
+| Implementation state | API foundation committed and merged; check local Git status separately |
+| Application source code | Tracked Python API foundation under `services/api/devflow_api/`; no frontend or workflow code |
+| Dependency manifests / lockfiles | Python `pyproject.toml`, `uv.lock`, and `.python-version`; no frontend package manifest |
+| Test suites / test config | pytest unit tests and a PostgreSQL integration test under `tests/` |
 | CI/CD workflows | **None.** `.github/` contains only `copilot-instructions.md` |
-| Docker / deployment files | Local PostgreSQL `compose.yaml` (uncommitted); no deployment files |
-| Type of repository | Documentation, specifications, and an initial uncommitted Python API foundation |
-| Executable scripts | Documentation validator plus the `devflow-api` entry point (uncommitted) |
+| Docker / deployment files | Local PostgreSQL `compose.yaml`; no deployment files |
+| Type of repository | Documentation, specifications, and an initial Python API foundation |
+| Executable scripts | Documentation validator plus the `devflow-api` entry point |
 | Gitignored tooling | `.agents/`, `.claude/`, `.codex/`, `.opencode/` (installed skill libraries), `graphify-out/`, `.gemini/`, `.antigravity/` |
 
 **Ignored agent directories are anticipatory, not present.** `.gemini/` and `.antigravity/` are listed in `.gitignore` (lines 60–61) but **do not exist** in this checkout. Both rules are on the machine-local tooling list for consistency with the other agent directories; if either is created and holds project-owned instructions, it must be added to the cross-agent matrix in `AGENTS.md` and evaluated on its merits rather than remaining ignored by default.
@@ -387,14 +386,14 @@ Record durable decisions as ADRs in `docs/decisions/NNNN-short-title.md` contain
 ## 12. Current status and next step
 
 - The owner has approved the high-level MVP direction in [§3](#3-owner-approved-mvp-direction).
-- The initial API foundation is present on the uncommitted feature branch; product workflows and CI remain unimplemented.
+- The initial API foundation is merged into `dev`; product workflows and CI remain unimplemented.
 - Implementation status, Git state, package managers, dependencies, and measurements must always be verified locally.
 - **No production-readiness, security-audit, or performance claim is implied by this document.**
 
-**Next step:** Milestone 1 in `PLAN.md` — developer foundation (runtime/package-manager decisions, layout, quality gates), then the Milestone 2 task domain. See `.agent-state/CURRENT.md`.
+**Next step:** Finish Milestone 1 by adding CI and its documentation-validation gate. See `.agent-state/CURRENT.md` and `PLAN.md`.
 
 ---
 
 ## 13. Quick-start prompt for any coding agent
 
-> You are working on DevFlow AI. Read `PROJECT_CONTEXT.md`, then `AGENTS.md` and subject documents before editing. At baseline `e82ba8f` the repository contained specifications and documentation; the current feature branch contains an initial uncommitted Python API foundation. Verify Git status and `.agent-state/CURRENT.md`. The owner-approved MVP remains a Next.js + shadcn/ui dashboard, FastAPI + LangGraph backend, Python CLI using the same API, PostgreSQL durable state, optional Redis, a separate background worker, and SSE progress. Keep task submission fast; preserve existing work and agent configuration. Do not claim tests or performance results without evidence. Do not commit or push unless explicitly requested.
+> You are working on DevFlow AI. Read `PROJECT_CONTEXT.md`, then `AGENTS.md` and subject documents before editing. At baseline `e82ba8f` the repository contained specifications and documentation; the API foundation was merged into `dev` at `f373ebc`. Verify Git status and `.agent-state/CURRENT.md`. The owner-approved MVP remains a Next.js + shadcn/ui dashboard, FastAPI + LangGraph backend, Python CLI using the same API, PostgreSQL durable state, optional Redis, a separate background worker, and SSE progress. Keep task submission fast; preserve existing work and agent configuration. Do not claim tests or performance results without evidence. Do not commit or push unless explicitly requested.

@@ -18,7 +18,7 @@ Before making changes, inspect Git status and read:
 Read the subject documents relevant to your change; you are not expected to read all of them for every task. Use `docs/DOCUMENTATION_INDEX.md` § 9 to find the right one quickly.
 
 ## Verified starting conditions
-At baseline commit `e82ba8f`, this repository contained documentation and specifications only. The uncommitted `feature/m1-api-foundation` work adds an initial Python API foundation; `.agent-state/CURRENT.md` records verified current facts. Product requirements remain planned unless evidence is linked (see `docs/REQUIREMENTS_TRACEABILITY.md`).
+At baseline commit `e82ba8f`, this repository contained documentation and specifications only. The initial Python API foundation was merged into `dev` by PR #2 at `f373ebc`; `.agent-state/CURRENT.md` records verified current facts. Product requirements remain planned unless evidence is linked (see `docs/REQUIREMENTS_TRACEABILITY.md`).
 
 Also follow existing tool-specific instructions (`CLAUDE.md`, `.github/copilot-instructions.md`, `.codex`, `.opencode`, `.agents`, and other agent configs). If instructions conflict, stop and report the conflict rather than silently deleting or weakening a rule.
 
