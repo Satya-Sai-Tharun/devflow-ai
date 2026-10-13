@@ -32,19 +32,19 @@ dev = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["services/api/devflow_api"]
+packages = ["devflow_api"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
-pythonpath = ["services/api"]
+pythonpath = ["."]
 markers = ["integration: requires a dedicated local PostgreSQL test database"]
 addopts = "-m 'not integration'"
 
 [tool.ruff]
 target-version = "py312"
 line-length = 100
-src = ["services/api"]
+src = ["."]
 extend-exclude = ["docs"]
 
 [tool.ruff.lint]
@@ -55,5 +55,5 @@ pythonVersion = "3.12"
 typeCheckingMode = "strict"
 venvPath = "."
 venv = ".venv"
-include = ["services/api/devflow_api", "tests"]
-extraPaths = ["services/api"]
+include = ["devflow_api", "tests"]
+extraPaths = ["."]

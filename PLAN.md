@@ -16,9 +16,9 @@
 - [x] Define the fast request path and asynchronous worker principle.
 - [x] Define an initial task lifecycle and performance budgets.
 - [x] Reconcile every source-of-truth document with the actual local tree and existing instructions.
-- [ ] Confirm package managers/runtime versions and durable dispatch strategy — **proposed** in [`docs/decisions/0007`](docs/decisions/0007-runtime-and-package-managers.md) and [`0002`](docs/decisions/0002-durable-job-dispatch.md); awaiting owner approval.
+- [x] Confirm package managers/runtime versions and durable dispatch strategy — accepted in [`docs/decisions/0007`](docs/decisions/0007-runtime-and-package-managers.md) and [`0002`](docs/decisions/0002-durable-job-dispatch.md).
 
-**Exit:** Consistent documents and visible remaining decisions. *(Documentation is consistent; ten decisions are recorded as Proposed in [`docs/decisions/`](docs/decisions/README.md).)*
+**Exit:** Consistent documents and visible remaining decisions. *(Documentation is reconciled; decision status is maintained in [`docs/decisions/`](docs/decisions/README.md).)*
 
 ### Milestone 0 deliverables (completed in this pass)
 - [`PROJECT_CONTEXT.md`](PROJECT_CONTEXT.md) reconciled to the verified tree (it did not previously exist).
@@ -29,7 +29,7 @@
 
 ### Decision status entering Milestone 1
 
-**Owner decisions recorded 2026-10-13.** Seven ADRs moved from Proposed to **Accepted**; three remain **Proposed and non-binding**. The full index is in [`docs/decisions/README.md`](docs/decisions/README.md).
+**Owner decisions recorded 2026-10-13.** Eight ADRs are **Accepted**; three remain **Proposed and non-binding**. The full index is in [`docs/decisions/README.md`](docs/decisions/README.md).
 
 | Decision | ADR | Status | Must be resolved before | Why this early |
 |---|---|---|---|---|
@@ -51,10 +51,11 @@
 
 ## Milestone 1 — Repository and developer foundation
 - [x] Audit tracked/untracked files, Git state, existing package managers, and tool instructions.
-- [x] Confirm the API package location from `ARCHITECTURE.md`; create the initial API under `services/api/`.
+- [x] Confirm the API package location from `ARCHITECTURE.md`; the initial API was first created under the historical `services/api/` path and is now in `backend/`.
 - [x] Select Python 3.12 and `uv` for the API; Node 22 LTS and `pnpm` remain the documented web choices.
 - [x] Establish pytest, Ruff, Pyright, Alembic, and API startup commands.
 - [x] Add `.env.example` with placeholders only.
+- [x] Relocate the backend Python project and provide root Docker Compose startup with explicit migrations (verified on this feature branch).
 - Add minimal CI only after identifying current conventions.
 - Wire the existing documentation validator ([`tools/validate-docs.ps1`](tools/validate-docs.ps1)) into that CI as the first gate. It already runs and passes locally (see [`docs/DOCUMENTATION_INDEX.md`](docs/DOCUMENTATION_INDEX.md) § 7); no CI exists yet, so it is currently a manual step.
 

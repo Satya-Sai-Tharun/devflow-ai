@@ -1,5 +1,7 @@
 # 0007. Runtime versions and package managers
 
+**Implementation update (2026-10-14):** This ADR's context below records the state before the M1 foundation. The Python project is now self-contained in `backend/` with `backend/pyproject.toml`, `backend/uv.lock`, and `backend/.python-version`. The future frontend has no package manifest yet.
+
 - **Status:** **Accepted** — approved by the project owner on 2026-10-13
 - **Date:** 2026-10-12 (proposed); 2026-10-13 (accepted)
 - **Deciders:** project owner

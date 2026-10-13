@@ -1,4 +1,6 @@
-# Milestone 1 API Foundation Implementation Plan
+# Milestone 1 API Foundation Implementation Plan (Historical)
+
+This plan records the original implementation location and commands at the time of M1-T1. The API project has since moved to `backend/`; current commands and paths are documented in the root `README.md`.
 
 **Goal:** Add a minimal, runnable FastAPI service with typed configuration, PostgreSQL readiness, explicit migrations, and repeatable Windows development checks.
 

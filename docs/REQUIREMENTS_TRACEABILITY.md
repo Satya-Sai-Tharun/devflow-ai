@@ -4,6 +4,8 @@
 
 **Status of this document:** Product requirements remain forward-looking. Milestone 1 adds partial foundation evidence for secret-safe configuration, health/readiness, and reproducible local setup; this does not satisfy broader product requirements.
 
+The repository layout and local Compose workflow are developer infrastructure. They do not mark any product requirement below as met; frontend behavior remains unimplemented.
+
 **Authoritative sources:** `PRD.md` (requirement text), `SPEC.md` (lifecycle and contract semantics), `ARCHITECTURE.md` (components). This document adds only the mapping and evidence expectations; where it appears to conflict with a source document, the source document wins.
 
 ---

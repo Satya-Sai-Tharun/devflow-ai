@@ -19,7 +19,7 @@ from sqlalchemy.ext.asyncio import (
 )
 
 LOGGER = logging.getLogger(__name__)
-ALEMBIC_CONFIG = Config(str(Path(__file__).resolve().parents[3] / "alembic.ini"))
+ALEMBIC_CONFIG = Config(str(Path(__file__).resolve().parents[1] / "alembic.ini"))
 
 
 def create_database_engine(database_url: PostgresDsn) -> AsyncEngine:

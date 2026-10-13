@@ -623,7 +623,7 @@ RETURNING o.id, o.task_id, o.attempt_count;
 
 ## 7. Connection pooling and query bounds
 
-**Proposed** guidance. Concrete numbers must come from measurement, and no driver, pool configuration, or ORM dependency exists in this repository today.
+**Proposed** guidance. The initial API uses SQLAlchemy's async engine and `asyncpg` with bounded connection and command timeouts. Role-specific pool sizing and concrete capacity numbers have not been measured and must be based on workload evidence.
 
 ### 7.1 Sizing and lifetime
 
@@ -656,7 +656,7 @@ The API role and the worker role are **separate database roles with separate cre
 
 ## 8. Migrations
 
-**Migration tooling and an initial Alembic revision now exist under `services/api/migrations/`. The baseline is intentionally empty; the product schema and domain migrations described in this document remain future work.**
+**Migration tooling and an initial Alembic revision exist under `backend/migrations/`. The baseline is intentionally empty; the product schema and domain migrations described in this document remain future work. Apply migrations explicitly with `docker compose run --rm backend alembic upgrade head` for the local Compose stack; application startup does not run migrations.**
 
 ### 8.1 Requirements
 
@@ -700,7 +700,7 @@ The recommended **Proposed** pattern:
 | Sqitch / Atlas and similar | Mature change-management semantics; drift detection | Extra toolchain and language dependency |
 | Framework-bundled migration system | Fewer moving parts | Couples migration safety to a larger decision |
 
-**The coupled ORM/driver decision is now owned** by [`decisions/0011`](decisions/0011-data-access-layer.md): SQLAlchemy 2.x asynchronous with `asyncpg`. There is no ORM dependency in this repository yet — `pyproject.toml` and `uv.lock` are **Milestone 1** deliverables (plan item T2) and are not created by documentation work.
+**The coupled ORM/driver decision is owned** by [`decisions/0011`](decisions/0011-data-access-layer.md): SQLAlchemy 2.x asynchronous with `asyncpg`. Both are installed through `backend/pyproject.toml` and its `backend/uv.lock`; no product-domain models or ORM tables exist yet.
 
 ## 9. Retention, deletion and privacy
 

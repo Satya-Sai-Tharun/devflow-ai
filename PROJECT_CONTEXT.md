@@ -1,8 +1,8 @@
 # DevFlow AI — Master Project Context
 
-**Version:** 1.2
-**Status:** Repository-reconciled, with owner decisions recorded. Supersedes v1.1 and the v1.0 briefing, which assumed files that do not exist in this checkout.
-**Last reconciled:** against commit `e8a4d71` (`main`), with the owner decisions of 2026-10-13 applied.
+**Version:** 1.3
+**Status:** Repository-reconciled, with owner decisions recorded and the backend/frontend boundaries reflected. Supersedes v1.2 and earlier briefings.
+**Last reconciled:** against the repository on `feature/repository-structure-refactor`, based on `e8ca84c`; current changes are uncommitted.
 **Purpose:** A single portable briefing and navigation hub for any coding agent or human developer working on DevFlow AI.
 
 > **Read order for agents:** this file, then `AGENTS.md`, then the subject documents listed in [§4 Source of truth](#4-source-of-truth-model).
@@ -37,19 +37,19 @@ The problem it addresses is not simply "how to generate code." Developers using 
 
 ## 2. Verified repository state
 
-**Current state verified:** M1 API foundation merged into `dev` by PR #2 at `f373ebc`, based on `e82ba8f`. Verify current branch and worktree before relying on changing local state.
+**Verified implementation base:** M1 API foundation merged into `dev` by PR #2 at `f373ebc`, based on `e82ba8f`. The current owner-approved repository refactor is uncommitted on `feature/repository-structure-refactor`, based on `e8ca84c`; verify Git status before relying on local changes.
 
 | Fact | Verified value |
 |---|---|
-| Branch | `dev`, containing M1 API foundation merge commit `f373ebc` |
+| Branch | `feature/repository-structure-refactor` based on `dev` at `e8ca84c`; changes are uncommitted |
 | Merge commit | PR #2, `f373ebcccac6984cc0c957127d804ccd40b6980b`; feature commit `acdd0d64f22539d745ae2d19972c788a45879f8b` |
-| Implementation state | API foundation committed and merged; check local Git status separately |
-| Application source code | Tracked Python API foundation under `services/api/devflow_api/`; no frontend or workflow code |
-| Dependency manifests / lockfiles | Python `pyproject.toml`, `uv.lock`, and `.python-version`; no frontend package manifest |
-| Test suites / test config | pytest unit tests and a PostgreSQL integration test under `tests/` |
+| Implementation state | FastAPI foundation relocated under `backend/`; Docker Compose backend and PostgreSQL startup added; verify current diff and checks before merge |
+| Application source code | Python API under `backend/devflow_api/`; `frontend/` is reserved with a README only; no frontend or workflow code |
+| Dependency manifests / lockfiles | Self-contained backend `backend/pyproject.toml`, `backend/uv.lock`, and `backend/.python-version`; no frontend package manifest |
+| Test suites / test config | pytest unit tests and guarded PostgreSQL integration test under `backend/tests/` |
 | CI/CD workflows | **None.** `.github/` contains only `copilot-instructions.md` |
-| Docker / deployment files | Local PostgreSQL `compose.yaml`; no deployment files |
-| Type of repository | Documentation, specifications, and an initial Python API foundation |
+| Docker / deployment files | Root `compose.yaml` starts PostgreSQL and backend; migration is explicit. `docs/DEPLOYMENT.md` is planning guidance only; no production deployment is configured |
+| Type of repository | Documentation and specifications plus the Python API foundation and root local Compose services |
 | Executable scripts | Documentation validator plus the `devflow-api` entry point |
 | Gitignored tooling | `.agents/`, `.claude/`, `.codex/`, `.opencode/` (installed skill libraries), `graphify-out/`, `.gemini/`, `.antigravity/` |
 
@@ -108,6 +108,7 @@ git ls-files
 | `docs/THREAT_MODEL.md` | Assets, trust boundaries, STRIDE analysis, mitigations, residual risk |
 | `docs/TESTING.md` | Test levels, quality gates, performance measurement |
 | `docs/PERFORMANCE.md` | Performance budgets and benchmark protocol |
+| `docs/DEPLOYMENT.md` | Future server deployment requirements and current limitations |
 | `docs/API_CONTRACTS.md` | API conventions, error model, versioning, SSE contract |
 | `docs/AGENT_RUNTIME.md` | Adapter interfaces, workflow state, execution bounds, failure handling |
 | `docs/DATABASE.md` | Entities, migrations, indexing, retention, ownership |
@@ -171,6 +172,7 @@ Each subject has exactly one authoritative document. Summaries elsewhere must li
 | Security requirements and threat analysis | `docs/SECURITY.md`, `docs/THREAT_MODEL.md` |
 | Test levels, quality gates, performance measurement protocol | `docs/TESTING.md` |
 | Performance budgets and benchmark protocol | `docs/PERFORMANCE.md` |
+| Future deployment operations and current deployment limits | `docs/DEPLOYMENT.md` (planning guidance; ADR 0004 remains the topology decision) |
 | Visual tokens, components, accessibility, motion | `Design-system.md` |
 | Engineering conventions | `CODE_STYLE.md` |
 | Universal agent rules and single-agent development workflow | `AGENTS.md` |
@@ -322,7 +324,7 @@ Authoritative detail: `docs/TESTING.md`, `docs/REQUIREMENTS_TRACEABILITY.md`.
 
 ## 8. Known caveats and traps
 
-1. **`graphify-out/` is stale and noisy.** The graph was built from commit `92b26715`, which is far behind `HEAD` (`e8a4d71`). Its 3,369 nodes are dominated by third-party skill libraries under `.agents/`, `.claude/`, `.codex/`, and `.opencode/`, with essentially no first-party application code (there is none). `graphify-out/wiki/index.md` referenced by `CLAUDE.md` **does not exist**. Do not rely on the graph for DevFlow AI architecture questions until it is regenerated against first-party sources.
+1. **`graphify-out/` is stale and noisy.** The graph was built from commit `92b26715`, far behind the current repository. Its 3,369 nodes are dominated by third-party skill libraries under `.agents/`, `.claude/`, `.codex/`, and `.opencode/`, and it does not include the API under `backend/`. `graphify-out/wiki/index.md` referenced by `CLAUDE.md` **does not exist**. Do not rely on the graph for DevFlow AI architecture questions until it is regenerated against first-party sources.
 2. **The v1.0 briefing was inaccurate.** It listed files that do not exist in this checkout. Do not re-introduce them as if present.
 3. **`docs/PERFORMANCE.md`, `PRD.md`, `ARCHITECTURE.md`, and `docs/TESTING.md` all restate the same budgets.** `docs/PERFORMANCE.md` is authoritative; the others should link to it rather than diverge.
 4. **No CI exists.** Any "quality gate" language describes intent, not enforcement.
@@ -386,7 +388,7 @@ Record durable decisions as ADRs in `docs/decisions/NNNN-short-title.md` contain
 ## 12. Current status and next step
 
 - The owner has approved the high-level MVP direction in [§3](#3-owner-approved-mvp-direction).
-- The initial API foundation is merged into `dev`; product workflows and CI remain unimplemented.
+- The initial API foundation is merged into `dev`; this branch relocates it under `backend/`. Product workflows, frontend implementation, and CI remain unimplemented.
 - Implementation status, Git state, package managers, dependencies, and measurements must always be verified locally.
 - **No production-readiness, security-audit, or performance claim is implied by this document.**
 
